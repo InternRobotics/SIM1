@@ -1,12 +1,18 @@
 # SIM1: Physics-Aligned Simulator as Zero-Shot Data Scaler in Deformable Worlds
 
+<p align="center">
+  <video src="docs/teaserv4.mp4" autoplay loop muted playsinline width="85%"></video>
+</p>
+
+*Teaser: copy your exported MP4 to `docs/teaserv4.mp4` in this repo, or change `src` to a hosted file URL (GitHub Releases, CDN, etc.). Browsers require `muted` for autoplay.*
+
 A research project from [InternRobotics](https://github.com/InternRobotics).
 
-[![GitHub](https://img.shields.io/badge/GitHub-SIM1-181717?style=flat&logo=github)](https://github.com/InternRobotics/SIM1) [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE) [![arXiv](https://img.shields.io/badge/arXiv-coming%20soon-b31b1b.svg)](https://arxiv.org/) [![Project Page](https://img.shields.io/badge/Project%20Page-SIM1-0366d6?style=flat&logo=githubpages&logoColor=white)](https://internrobotics.github.io/sim1.github.io/) [![Hugging Face · Assets](https://img.shields.io/badge/🤗%20Sim1-Assets-yellow)](https://huggingface.co/InternRobotics/Sim1_Assets) [![Hugging Face · Dataset](https://img.shields.io/badge/🤗%20Sim1-Dataset-yellow)](https://huggingface.co/datasets/InternRobotics/Sim1_Dataset)
+[![Demo](https://img.shields.io/badge/Demo-SIM1-0366d6?style=flat&logo=googlechrome&logoColor=white)](https://sim1-demo.intern-robotics.com/) [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE) [![arXiv](https://img.shields.io/badge/arXiv-coming%20soon-b31b1b.svg)](https://arxiv.org/) [![Project Page](https://img.shields.io/badge/Project%20Page-SIM1-0366d6?style=flat&logo=githubpages&logoColor=white)](https://internrobotics.github.io/sim1.github.io/) [![Hugging Face · Assets](https://img.shields.io/badge/🤗%20Sim1-Assets-yellow)](https://huggingface.co/InternRobotics/Sim1_Assets) [![Hugging Face · Dataset](https://img.shields.io/badge/🤗%20Sim1-Dataset-yellow)](https://huggingface.co/datasets/InternRobotics/Sim1_Dataset)
 
 [YouTube 1](https://youtu.be/tsPLa-1Lygw) · [YouTube 2](https://youtu.be/LXStHGWHh18) · [YouTube 3](https://youtu.be/zesn7aK9sgQ)
 
-**Sim1** is a **physics-aligned simulator** and data stack for dual-arm **cloth manipulation** in simulation: **teleoperation**, **diffusion-based data generation**, **replay**, **filtering**, and optional **photorealistic rendering**, built on [Newton](https://newton-physics.github.io/newton/) and NVIDIA [Warp](https://nvidia.github.io/warp/). This repository contains the full pipeline from interactive control and synthetic trajectory generation to rendering and LeRobot-style dataset export.
+**Sim1** is a physics-aligned simulator and data stack for dual-arm cloth manipulation in simulation: teleoperation, diffusion-based data generation, replay, filtering, and optional photorealistic rendering, built on [Newton](https://newton-physics.github.io/newton/) and NVIDIA [Warp](https://nvidia.github.io/warp/). This repository contains the full pipeline from interactive control and synthetic trajectory generation to rendering and LeRobot-style dataset export.
 
 ---
 
@@ -28,9 +34,14 @@ A research project from [InternRobotics](https://github.com/InternRobotics).
 
 ### Prerequisites
 
-Use **Python 3.11** with **conda** (environment name `sim1`) and **CUDA toolkit ≥ 11.8** if you want GPU acceleration.
+Use Python 3.11 with conda (environment name `sim1`) and CUDA toolkit ≥ 11.8 if you want GPU acceleration.
 
-> **Reference**: [Newton Installation Guide](https://newton-physics.github.io/newton/0.2.2/guide/installation.html#method-3-manual-setup-using-pip-in-a-virtual-environment)
+<details>
+<summary>Reference: Newton Installation Guide</summary>
+
+[Newton — manual setup with pip (virtual environment)](https://newton-physics.github.io/newton/0.2.2/guide/installation.html#method-3-manual-setup-using-pip-in-a-virtual-environment)
+
+</details>
 
 ---
 
@@ -45,18 +56,11 @@ conda activate sim1
 
 ### Step 2 — Clone the repository
 
-Clone **with submodules** so **`components/render/MeisterRender`** ([SIM1MeisterRender](https://github.com/InternRobotics/SIM1MeisterRender), `main` branch) is populated automatically:
+Clone with submodules so `components/render/MeisterRender` ([SIM1MeisterRender](https://github.com/InternRobotics/SIM1MeisterRender), `main` branch) is checked out automatically:
 
 ```bash
 git clone --recurse-submodules https://github.com/InternRobotics/SIM1.git sim1
 cd sim1
-```
-
-If you already cloned without submodules, fetch them once:
-
-```bash
-cd sim1
-git submodule update --init --recursive
 ```
 
 ---
@@ -70,24 +74,26 @@ conda activate sim1
 bash setup.sh
 ```
 
-**All Python dependencies** (simulation, DataGen, asset download helpers, optional full render stack, and post-install checks) are installed by **[`setup.sh`](setup.sh)** only. Open that file for the full list, optional environment variables (**`SIM1_SKIP_RENDER`**, **`TORCH_INDEX_URL`**), and the exact `pip` commands. For **which render step uses which package**, see [`components/render/README.md`](components/render/README.md).
+All Python dependencies (simulation, DataGen, asset download helpers, optional full render stack, and post-install checks) are installed by [`setup.sh`](setup.sh) only. Open that file for the full list, optional environment variables (`SIM1_SKIP_RENDER`, `TORCH_INDEX_URL`), and the exact `pip` commands. If you want to install a separate environment (for example render-only) or see which package each render step uses, refer to [`components/render/README.md`](components/render/README.md).
 
 ---
 
 ### Step 4 — Download assets (required before data generation)
 
-Simulation and rendering expect a fixed layout under the **repository root** `./assets/`. The project does **not** ask you to configure asset paths for data generation: `envs/lift2_short_shirt.py` (and related code) resolves `assets/acone/`, `assets/cloth/`, etc. relative to the repo root.
+Simulation, `run_pipeline.sh`, and the render stack all read the same Hugging Face bundle root. By default that is `./assets/` at the repo root (what `download_assets.sh` uses). The canonical resolver is `sim1_asset_paths.py`; override the root with:
 
-Download the official bundle from Hugging Face (**`InternRobotics/Sim1_Assets`**) into `./assets/`:
+```bash
+export SIM1_ASSETS_ROOT=/absolute/or/relative/path   # parent of acone/, cloth/, random/, model/, …
+```
+
+If you use `bash download_assets.sh /other/path`, set `SIM1_ASSETS_ROOT` to that same path (the script prints a suggested `export` line when it finishes).
+
+Download the official bundle from Hugging Face (`InternRobotics/Sim1_Assets`) into `./assets/`:
 
 ```bash
 # From the repository root (after setup.sh)
 bash download_assets.sh
 ```
-
-Use the **default** destination (`./assets` at the repo root) so it matches the hard-coded paths in `envs/`. A custom directory from `bash download_assets.sh /other/path` will **not** be picked up unless you symlink it to `./assets` or change the code.
-
-> **Note:** With **`--position-randomize`**, the EE reachability step reads an extra URDF via `newton.examples.get_asset(...)` under `newton/newton/examples/assets/`. That tree is **not** filled by `download_assets.sh`. If Step 4 fails, install Newton example assets there, run without **`--position-randomize`**, or use **`--skip_filter`** (not recommended for training).
 
 ---
 
@@ -100,7 +106,16 @@ python -c "import warp as wp; print('Warp OK')"
 python -c "import torch, torchvision; print('torch', torch.__version__, 'cuda', torch.cuda.is_available())"
 ```
 
-After **`bash download_assets.sh`**, you should see at least `assets/acone/acone.urdf` and `assets/cloth/short-shirt.usdc` before running **`run_pipeline.sh`**.
+Newton smoke test (MuJoCo humanoid + `nv_humanoid.xml`; needs a display for the GL viewer):
+
+```bash
+cd newton
+python newton/examples/robot/example_robot_humanoid.py
+```
+
+Equivalent: `python -m newton.examples robot_humanoid` (from the same `newton/` directory). The MJCF asset is `newton/examples/assets/nv_humanoid.xml`.
+
+After `bash download_assets.sh`, you should see at least `assets/acone/acone.urdf`, `assets/cloth/short-shirt.usdc`, and `assets/model/flow_ckpt_three.pth` before running `run_pipeline.sh`.
 
 ---
 
@@ -145,22 +160,19 @@ Then open `http://<server-ip>:8080` in a browser to view and control the simulat
 
 ## Quick Start — Data Generation
 
-`run_pipeline.sh` runs the full data path in one shot: **generate → Kalman smooth → replay (NPZ + USD) → filter**. Generation uses the diffusion-policy path; assets come from **`./assets/`** after **`bash download_assets.sh`** (see [Step 4 — Download assets](#step-4--download-assets)). For extra diversity at replay, add **`--position-randomize`**.
+`run_pipeline.sh` runs the full data path in one shot: generate → Kalman smooth → replay (NPZ + USD) → filter. Generation uses the diffusion-policy path; robot URDF and cloth USD come from the Hugging Face bundle (default `./assets/`, or `SIM1_ASSETS_ROOT`; see [Step 4 — Download assets](#step-4--download-assets)). The script prints `HF assets : …` on startup. For extra diversity at replay, add `--position-randomize`.
 
 ### Generate data
 
-From the **repository root**, after [Installation](#installation):
+From the repository root (conda env, assets, and clone steps are in [Installation](#installation) and [Step 4 — Download assets](#step-4--download-assets)):
 
 ```bash
-conda activate sim1
-cd /path/to/sim1
-bash download_assets.sh    # once per machine / fresh clone
-bash run_pipeline.sh --num 10
+bash run_pipeline.sh --num 100
 ```
 
-Optional: `bash run_pipeline.sh --num 10 --position-randomize`
+Optional: `bash run_pipeline.sh --num 100 --position-randomize`
 
-You get trajectories under **`./dataset/example/`** and a replay session **`replay/pipeline_output_XXXX/`** (the script prints the path). Use that folder as **`--root_dir`** for [Rendering Pipeline](#rendering-pipeline).
+You get trajectories under `./dataset/example/` and a replay session `replay/pipeline_output_XXXX/` (the script prints the path). Use that folder as `--root_dir` for [Rendering Pipeline](#rendering-pipeline).
 
 <details>
 <summary>All <code>run_pipeline.sh</code> options (advanced)</summary>
@@ -172,9 +184,9 @@ You get trajectories under **`./dataset/example/`** and a replay session **`repl
 | `--workers N` | Parallel workers (smooth + filters) | 8 |
 | `--skip_smooth` / `--skip_replay` / `--skip_filter` | Skip a stage | off |
 | `--folder_name NAME` | `replay/<NAME>_XXXX/` base name | `pipeline_output` |
-| `--position-randomize` | Random cloth pose at replay; **auto-selects** EE + aligned cloth filters. Omit → **standard** cloth-quality filter only | off |
+| `--position-randomize` | Random cloth pose at replay; joint filter also runs EE reachability (FK). Omit → joint filter uses `--no-check-ee` (jump / mutation only) | off |
 | `--ref_usd PATH` | Reference USD for aligned cloth filter (with randomization); auto-picked if omitted | auto |
-| `--skip_asset_check` | Do not verify `./assets/` before running | off |
+| `--skip_asset_check` | Do not verify the HF bundle (`SIM1_ASSETS_ROOT`) before running | off |
 
 </details>
 
@@ -189,8 +201,8 @@ run_pipeline.sh
 │                     → <data_folder>/gen/kf/*.npz
 ├─ 3. Replay      →  apps/replay_app.py [--position-randomize]
 │                     → replay/<folder_name>_NNNN/{npz,usd}/
-└─ 4. Filter      →  No flag: filter_cloth_quality.py (direct)
-                     With --position-randomize: filter_joint_unreachable.py → filter_cloth_quality.py --ref-usd
+└─ 4. Filter      →  filter_joint_unreachable.py (joint jump + first-5 mutation; + EE FK if --position-randomize)
+                     → filter_cloth_quality.py (aligned + --ref-usd if randomize, else direct)
 ```
 
 ### Session layout
@@ -202,19 +214,19 @@ replay/
     ├── usd/
     ├── npz_bad_cloth/
     ├── usd_bad_cloth/
-    ├── npz_unreachable/          # only with --position-randomize
+    ├── npz_unreachable/          # joint / EE rejects (see filter_joint_unreachable.py logs)
     └── cloth_filter_summary.txt
 ```
 
 <details>
 <summary>Manual step-by-step (only if you are not using <code>run_pipeline.sh</code>)</summary>
 
-**1. Generate:** `python apps/datagen_app.py --data_folder ./dataset/example --num 10 --use_dp --mode fine`  
-**2. Smooth:** `python scripts/smooth_trajectory_multi_thread.py ./dataset/example/gen ./dataset/example/gen/kf --method kalman --workers 8`  
-**3. Replay:** `python apps/replay_app.py ./dataset/example/gen/kf --folder_name my_replay`  
+1. Generate: `python apps/datagen_app.py --data_folder ./dataset/example --num 100 --use_dp --mode fine`  
+2. Smooth: `python scripts/smooth_trajectory_multi_thread.py ./dataset/example/gen ./dataset/example/gen/kf --method kalman --workers 8`  
+3. Replay: `python apps/replay_app.py ./dataset/example/gen/kf --folder_name my_replay`  
 Optional cloth position randomization at replay: add `--position-randomize` (then use the matching manual filters as in Step 4 above).  
-**4a. Reachability (only with randomization):** `python scripts/filter_joint_unreachable.py ./replay/my_replay_0001/npz --usd-dir ./replay/my_replay_0001/usd --workers 8`  
-**4b. Cloth quality:** `python scripts/filter_cloth_quality.py ./replay/my_replay_0001` (add `--ref-usd ...` if you used randomization)
+4a. Joint / EE filter: `python scripts/filter_joint_unreachable.py ./replay/my_replay_0001/npz --usd-dir ./replay/my_replay_0001/usd --workers 8` (add `--no-check-ee` to skip EE FK; joint checks always run)  
+4b. Cloth quality: `python scripts/filter_cloth_quality.py ./replay/my_replay_0001` (add `--ref-usd ...` if you used randomization)
 
 </details>
 
@@ -222,11 +234,11 @@ Optional cloth position randomization at replay: add `--position-randomize` (the
 
 ## Rendering Pipeline
 
-Convert simulation USD output to photorealistic data: **`main.py` runs Steps 1–3 by default** (USD → blend → cameras → `blend_out/`). **Step 4** (MeisterRender path tracing + LMDB) writes under **`out_updated/<record_id>/`**; run it via `batch_step4.sh`, or inline with `main.py --step4`.
+Convert simulation USD output to photorealistic data: `main.py` runs Steps 1–3 by default (USD → blend → cameras → `blend_out/`). Step 4 (MeisterRender path tracing + LMDB) writes under `out_updated/<record_id>/`; run it via `batch_step4.sh`, or inline with `main.py --step4`.
 
-**MeisterRender** lives in the **git submodule** `components/render/MeisterRender` ([InternRobotics/SIM1MeisterRender](https://github.com/InternRobotics/SIM1MeisterRender), `main`). Use **`git clone --recurse-submodules`** in [Step 2](#step-2--clone-the-repository) so it is checked out automatically.
+MeisterRender lives in the git submodule `components/render/MeisterRender` ([InternRobotics/SIM1MeisterRender](https://github.com/InternRobotics/SIM1MeisterRender), `main`). Use `git clone --recurse-submodules` in [Step 2](#step-2--clone-the-repository) so it is checked out automatically.
 
-**Environment:** use the same **`sim1`** env; the render stack is installed by **`setup.sh`** unless you set **`SIM1_SKIP_RENDER=1`** (see comments in `setup.sh`). Package-to-step mapping: [`components/render/README.md`](components/render/README.md).
+Environment: use the same `sim1` env; the render stack is installed by `setup.sh` unless you set `SIM1_SKIP_RENDER=1` (see comments in `setup.sh`). For a separate install or per-step package notes, see [`components/render/README.md`](components/render/README.md).
 
 ```bash
 conda activate sim1
@@ -239,28 +251,22 @@ bash components/render/batch_step4.sh ./replay/my_run_0001
 
 ### Asset Configuration
 
-Rendering assets (backgrounds, tables, materials) default to **`assets/render/`** under the repo root (from `download_assets.sh`). Override with paths **relative to the repo root**, for example:
-
-```bash
-export SIM1_BG_ROOT=./assets/random/bg
-export SIM1_TABLE_ROOT=./assets/random/table
-export SIM1_MAT_ROOT=./assets/random/mat
-```
+Rendering resolves the HF bundle via `SIM1_ASSETS_ROOT` (default `<repo>/assets/`). HDRI / table / cloth glTF roots default to `assets/random/{bg,table,mat}/` inside that bundle (`sim1_asset_paths.py`); no extra `export` is required for the usual layout.
 
 ---
 
 ## Data Conversion
 
-After Step 4 rendering, trajectories are stored under **`replay/<session>/out_updated/<record_id>/`** as LMDB + `meta_info.pkl`. To convert them into a **LeRobot v2** dataset for training, use **`components/lmdb2lerobot/`**.
+After Step 4 rendering, trajectories are stored under `replay/<session>/out_updated/<record_id>/` as LMDB + `meta_info.pkl`. To convert them into a LeRobot v2 dataset for training, use `components/lmdb2lerobot/`.
 
-**One-time environment** (separate conda env `lerobot`, Python 3.12 — see full docs for details):
+One-time environment (separate conda env `lerobot`, Python 3.12 — see full docs for details):
 
 ```bash
 bash components/lmdb2lerobot/setup_conda_lerobot.sh
 conda activate lerobot
 ```
 
-**Single session → LeRobot dataset:**
+Single session → LeRobot dataset:
 
 ```bash
 bash components/lmdb2lerobot/run_local.sh \
@@ -268,7 +274,9 @@ bash components/lmdb2lerobot/run_local.sh \
   --out ./replay/my_session/lerobot_dataset
 ```
 
-**Batch / multi-GPU** (optional): `components/lmdb2lerobot/run_batch.sh` — see [`components/lmdb2lerobot/README.md`](components/lmdb2lerobot/README.md).
+This runs LMDB→LeRobot, sim2real, then removes near-static frames by default (`--keep-static-frames` to skip).
+
+Batch / multi-GPU (optional): `components/lmdb2lerobot/run_batch.sh` — see [`components/lmdb2lerobot/README.md`](components/lmdb2lerobot/README.md).
 
 ---
 
@@ -307,11 +315,11 @@ sim1/
 │   ├── randomization/          # Environment randomization
 │   ├── recorder/               # Dual-arm data recorder
 │   ├── render/                 # USD → Blender → MeisterRender (git submodule) pipeline
-│   └── lmdb2lerobot/           # LMDB → LeRobot v2 (+ sim2real); remove_static_frames.py (trim static frames)
+│   └── lmdb2lerobot/           # LMDB → LeRobot v2 (+ sim2real + remove_static_frames by default)
 │
 ├── scripts/                    # Post-processing scripts
 │   ├── smooth_trajectory_multi_thread.py   # Kalman smooth (used by run_pipeline.sh)
-│   ├── filter_joint_unreachable.py         # EE reachability (with --position-randomize)
+│   ├── filter_joint_unreachable.py         # Joint jump + optional EE reachability (see --no-check-ee)
 │   ├── filter_cloth_quality.py             # Cloth-quality filter (used by run_pipeline.sh)
 │   └── convert_ee_quat.py                  # EE pose conversion (used by datagen)
 │
@@ -328,21 +336,21 @@ sim1/
 
 ### Completed
 
-- [x] **Simulation assets** — Robot URDFs, cloth meshes, render assets on Hugging Face ([Sim1 assets](https://huggingface.co/InternRobotics/Sim1_Assets)); see [Download assets](#step-4--download-assets) and `download_assets.sh`.
-- [x] **Public datasets** — Pre-generated trajectories / rendered data ([Sim1 dataset](https://huggingface.co/datasets/InternRobotics/Sim1_Dataset)) and related releases.
-- [x] **Data generation pipeline** — Generate → smooth → replay → filter with `run_pipeline.sh`; optional `--position-randomize` ([Quick Start — Data Generation](#quick-start--data-generation)).
-- [x] **Training utilities** — Policy / trajectory code under `module_train/` (e.g. discriminator, generator).
+- [x] Simulation assets — Robot URDFs, cloth meshes, render assets on Hugging Face ([Sim1 assets](https://huggingface.co/InternRobotics/Sim1_Assets)); see [Download assets](#step-4--download-assets) and `download_assets.sh`.
+- [x] Public datasets — Pre-generated trajectories / rendered data ([Sim1 dataset](https://huggingface.co/datasets/InternRobotics/Sim1_Dataset)) and related releases.
+- [x] Data generation pipeline — Generate → smooth → replay → filter with `run_pipeline.sh`; optional `--position-randomize` ([Quick Start — Data Generation](#quick-start--data-generation)).
+- [x] Training utilities — Policy / trajectory code under `module_train/` (e.g. discriminator, generator).
 
 ### Planned
 
-- [ ] **Upgrade to latest Newton** — Bump bundled `newton/` to upstream; adapt API changes in envs/tasks/components.
-- [ ] **Integrate libuipc solver** — Optional [libuipc](https://github.com/libuipc/libuipc) cloth/deformable backend for richer contact and friction.
+- [ ] Upgrade to latest Newton — Bump bundled `newton/` to upstream; adapt API changes in envs/tasks/components.
+- [ ] Integrate libuipc solver — Optional [libuipc](https://github.com/libuipc/libuipc) cloth/deformable backend for richer contact and friction.
 
 ---
 
 ## Citation
 
-If you use **Sim1** (code, assets, or datasets) in research, please cite the paper below. **Code:** [github.com/InternRobotics/SIM1](https://github.com/InternRobotics/SIM1). **Project page:** [internrobotics.github.io/sim1.github.io](https://internrobotics.github.io/sim1.github.io/).
+If you use Sim1 (code, assets, or datasets) in research, please cite the paper below. Code: [github.com/InternRobotics/SIM1](https://github.com/InternRobotics/SIM1). Project page: [internrobotics.github.io/sim1.github.io](https://internrobotics.github.io/sim1.github.io/).
 
 ```bibtex
 @article{sim1_2026,
@@ -357,4 +365,4 @@ If you use **Sim1** (code, assets, or datasets) in research, please cite the pap
 
 ## License
 
-Unless otherwise noted, all resources and code in this repository are licensed under the **[Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0)**. **Language data** is licensed under **[CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/)**. **[Newton](https://github.com/newton-physics/newton)** and other third-party components follow their respective distribution licenses; see e.g. [newton/LICENSE.md](newton/LICENSE.md).
+Unless otherwise noted, all resources and code in this repository are licensed under the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0). Language data is licensed under [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/). [Newton](https://github.com/newton-physics/newton) and other third-party components follow their respective distribution licenses; see e.g. [newton/LICENSE.md](newton/LICENSE.md).

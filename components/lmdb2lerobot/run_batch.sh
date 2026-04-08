@@ -23,6 +23,9 @@
 #   --repo-id NAME     default arx_sim_local
 #   --num-threads N    LMDB read threads per worker (default: 4)
 #   --skip-sim2real    skip sim2real.py post-processing
+#   --keep-static-frames   skip remove_static_frames.py (default: run static-frame removal)
+#   --static-threshold-ratio R   passed to remove_static_frames.py (default: 0.00001)
+#   --static-workers N   workers for remove_static_frames.py (default: 4)
 #   --dry-run          print task list without executing
 
 set -euo pipefail
@@ -39,6 +42,9 @@ ORIGIN_FPS=60
 REPO_ID="arx_sim_local"
 NUM_THREADS=4
 SKIP_SIM2REAL=0
+KEEP_STATIC_FRAMES=0
+STATIC_THRESHOLD_RATIO="0.00001"
+STATIC_WORKERS=4
 DRY_RUN=0
 
 usage() {
@@ -58,6 +64,9 @@ while [[ $# -gt 0 ]]; do
     --repo-id)       REPO_ID="${2:?}"; shift 2 ;;
     --num-threads)   NUM_THREADS="${2:?}"; shift 2 ;;
     --skip-sim2real) SKIP_SIM2REAL=1; shift ;;
+    --keep-static-frames) KEEP_STATIC_FRAMES=1; shift ;;
+    --static-threshold-ratio) STATIC_THRESHOLD_RATIO="${2:?}"; shift 2 ;;
+    --static-workers) STATIC_WORKERS="${2:?}"; shift 2 ;;
     --dry-run)       DRY_RUN=1; shift ;;
     -h|--help)       usage 0 ;;
     *) echo "Unknown argument: $1" >&2; usage 1 ;;
@@ -136,8 +145,11 @@ run_one() {
     --origin-fps "${ORIGIN_FPS}"
     --target-fps "${TARGET_FPS}"
     --num-threads "${NUM_THREADS}"
+    --static-threshold-ratio "${STATIC_THRESHOLD_RATIO}"
+    --static-workers "${STATIC_WORKERS}"
   )
   [[ "${SKIP_SIM2REAL}" -eq 1 ]] && cmd+=(--skip-sim2real)
+  [[ "${KEEP_STATIC_FRAMES}" -eq 1 ]] && cmd+=(--keep-static-frames)
 
   [[ -n "${gpu_id}" ]] && export CUDA_VISIBLE_DEVICES="${gpu_id}"
 
@@ -151,7 +163,8 @@ run_one() {
   fi
 }
 export -f run_one
-export SCRIPT_DIR REPO_ID ORIGIN_FPS TARGET_FPS NUM_THREADS SKIP_SIM2REAL
+export SCRIPT_DIR REPO_ID ORIGIN_FPS TARGET_FPS NUM_THREADS SKIP_SIM2REAL \
+  KEEP_STATIC_FRAMES STATIC_THRESHOLD_RATIO STATIC_WORKERS
 
 # ── semaphore-style scheduler ─────────────────────────────────────────────────
 PIDS=()

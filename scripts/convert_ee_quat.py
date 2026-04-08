@@ -1,8 +1,14 @@
 import numpy as np
 import warp as wp
 import newton
-import newton.examples
 import os
+import sys
+
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+_REPO_ROOT = os.path.dirname(_SCRIPT_DIR)
+if _REPO_ROOT not in sys.path:
+    sys.path.insert(0, _REPO_ROOT)
+from sim1_asset_paths import get_acone_urdf_path
 
 # === Path configuration ===
 # These are used only when running this script directly.
@@ -28,7 +34,7 @@ right_ee_body_names = {"right_link26"}
 def build_model_and_get_ee_indices():
     builder = newton.ModelBuilder()
     builder.add_urdf(
-        newton.examples.get_asset("acone/acone.urdf"),
+        get_acone_urdf_path(),
         floating=False,
         enable_self_collisions=False,
         xform=wp.transform(p=wp.vec3(0.0, 0.0, ROBOT_BASE_HEIGHT))

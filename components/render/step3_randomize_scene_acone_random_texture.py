@@ -11,7 +11,7 @@ if _rdir not in sys.path:
     sys.path.insert(0, _rdir)
 from asset_paths import get_bg_root, get_mat_root, get_table_root
 
-# Defaults: <project>/assets/render/{bg,table,mat}; override via SIM1_ASSETS_ROOT or per-folder env vars.
+# Defaults: <project>/assets/random/{bg,table,mat} via sim1_asset_paths; override via SIM1_*_ROOT if needed.
 bg_exr_root = get_bg_root()
 table_gltf_root = get_table_root()
 mat_gltf_root = get_mat_root()

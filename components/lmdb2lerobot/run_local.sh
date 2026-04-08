@@ -22,6 +22,13 @@ Required:
 
 Options:
   --skip-sim2real   skip sim2real.py post-processing
+  --keep-static-frames
+                    skip remove_static_frames.py (by default, near-static frames are removed
+                    after LeRobot conversion + sim2real)
+  --static-threshold-ratio R
+                    passed to remove_static_frames.py (default: 0.00001)
+  --static-workers N
+                    parallel workers for remove_static_frames.py (default: 4)
   --debug           process only the first episode (smoke test)
   --repo-id NAME    dataset repo_id written to metadata (default: arx_sim_local)
   --origin-fps N    source LMDB frame rate (default: 60)
@@ -46,6 +53,9 @@ to_abs() {
 SRC=""
 SAVE=""
 SKIP_SIM2REAL=0
+KEEP_STATIC_FRAMES=0
+STATIC_THRESHOLD_RATIO="0.00001"
+STATIC_WORKERS=4
 DEBUG_FLAG=()
 REPO_ID="arx_sim_local"
 ORIGIN_FPS=60
@@ -65,6 +75,18 @@ while [[ $# -gt 0 ]]; do
     --skip-sim2real)
       SKIP_SIM2REAL=1
       shift
+      ;;
+    --keep-static-frames)
+      KEEP_STATIC_FRAMES=1
+      shift
+      ;;
+    --static-threshold-ratio)
+      STATIC_THRESHOLD_RATIO="${2:?}"
+      shift 2
+      ;;
+    --static-workers)
+      STATIC_WORKERS="${2:?}"
+      shift 2
       ;;
     --debug)
       DEBUG_FLAG=(--debug)
@@ -135,6 +157,15 @@ if [[ "${SKIP_SIM2REAL}" -eq 0 ]]; then
   python "${SCRIPT_DIR}/sim2real.py" --dir "${SAVE}"
 else
   echo "=== Skipped sim2real (--skip-sim2real) ==="
+fi
+
+if [[ "${KEEP_STATIC_FRAMES}" -eq 0 ]]; then
+  echo "=== Step 3: remove near-static frames (in-place on dataset) ==="
+  python "${SCRIPT_DIR}/remove_static_frames.py" "${SAVE}" \
+    --threshold_ratio "${STATIC_THRESHOLD_RATIO}" \
+    --workers "${STATIC_WORKERS}"
+else
+  echo "=== Skipped remove_static_frames (--keep-static-frames) ==="
 fi
 
 echo "Done. LeRobot dataset: ${SAVE}"

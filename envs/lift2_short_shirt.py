@@ -1,4 +1,13 @@
 import os
+import sys
+
+# Repo root must be on path for sim1_asset_paths (Hugging Face asset root: SIM1_ASSETS_ROOT).
+_ENV_DIR = os.path.dirname(os.path.abspath(__file__))
+_REPO_ROOT = os.path.dirname(_ENV_DIR)
+if _REPO_ROOT not in sys.path:
+    sys.path.insert(0, _REPO_ROOT)
+
+from sim1_asset_paths import get_acone_urdf_path, get_cloth_usdc_path
 
 import newton
 import warp as wp
@@ -28,9 +37,8 @@ left_gripper_joint_names = {"left_joint17", "left_joint18"}
 right_ee_body_names = {"right_link26"}
 right_gripper_joint_names = {"right_joint27", "right_joint28"}
 
-_PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-_ACONE_URDF_PATH = os.path.join(_PROJECT_ROOT, "assets", "acone", "acone.urdf")
-_CLOTH_USDC_PATH = os.path.join(_PROJECT_ROOT, "assets", "cloth", "short-shirt.usdc")
+_ACONE_URDF_PATH = get_acone_urdf_path()
+_CLOTH_USDC_PATH = get_cloth_usdc_path()
 
 
 def load_json(config_file):

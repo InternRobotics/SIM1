@@ -17,7 +17,7 @@
 #
 # Prerequisite (once): download SIM1 assets from Hugging Face into ./assets/
 #   bash download_assets.sh
-# Simulation code loads <repo>/assets/ automatically — you do not pass asset paths here.
+# Paths are resolved via SIM1_ASSETS_ROOT (default: <repo>/assets). Same variable as Python envs/render.
 #
 # Usage:
 #   bash run_pipeline.sh [OPTIONS]
@@ -52,37 +52,47 @@ SKIP_REPLAY=false
 SKIP_FILTER=false
 SKIP_ASSET_CHECK=false
 
-# ── Verify SIM1 assets (simulation reads <repo>/assets/ automatically) ──
+# ── Resolve Hugging Face asset root (same rules as sim1_asset_paths.py) ──
+resolve_assets_root() {
+    if [[ -z "${SIM1_ASSETS_ROOT:-}" ]]; then
+        echo "${PROJECT_ROOT}/assets"
+        return
+    fi
+    if [[ "${SIM1_ASSETS_ROOT}" = /* ]]; then
+        echo "${SIM1_ASSETS_ROOT}"
+    else
+        echo "${PROJECT_ROOT}/${SIM1_ASSETS_ROOT}"
+    fi
+}
+
+# ── Verify SIM1 assets (URDF/cloth from HF bundle; see SIM1_ASSETS_ROOT) ──
 verify_sim1_assets() {
     if $SKIP_ASSET_CHECK; then
         return 0
     fi
+    local ASSETS_ROOT
+    ASSETS_ROOT="$(resolve_assets_root)"
+    export SIM1_ASSETS_ROOT="${ASSETS_ROOT}"
     local missing=0
-    if [[ ! -f "${PROJECT_ROOT}/assets/acone/acone.urdf" ]]; then
-        echo "[ERROR] Missing: ${PROJECT_ROOT}/assets/acone/acone.urdf"
+    if [[ ! -f "${ASSETS_ROOT}/acone/acone.urdf" ]]; then
+        echo "[ERROR] Missing: ${ASSETS_ROOT}/acone/acone.urdf"
         missing=1
     fi
-    if [[ ! -f "${PROJECT_ROOT}/assets/cloth/short-shirt.usdc" ]]; then
-        echo "[ERROR] Missing: ${PROJECT_ROOT}/assets/cloth/short-shirt.usdc"
+    if [[ ! -f "${ASSETS_ROOT}/cloth/short-shirt.usdc" ]]; then
+        echo "[ERROR] Missing: ${ASSETS_ROOT}/cloth/short-shirt.usdc"
+        missing=1
+    fi
+    if [[ ! -f "${ASSETS_ROOT}/model/flow_ckpt_three.pth" ]]; then
+        echo "[ERROR] Missing diffusion checkpoint: ${ASSETS_ROOT}/model/flow_ckpt_three.pth"
         missing=1
     fi
     if [[ $missing -ne 0 ]]; then
         echo ""
-        echo "Download SIM1 assets from Hugging Face into ./assets/ (repo root), then re-run:"
-        echo "  bash download_assets.sh"
+        echo "Download SIM1 assets from Hugging Face, then re-run:"
+        echo "  bash download_assets.sh                    # default: <repo>/assets"
+        echo "  # or set SIM1_ASSETS_ROOT to your --local-dir from hf download"
         echo ""
         exit 1
-    fi
-    if $POSITION_RANDOMIZE && ! $SKIP_FILTER; then
-        local lift2="${PROJECT_ROOT}/newton/newton/examples/assets/lift2_collision/lift2_collision.urdf"
-        if [[ ! -f "$lift2" ]]; then
-            echo "[WARN] EE reachability filter expects Newton example URDF:"
-            echo "       $lift2"
-            echo "       (Not part of InternRobotics/Sim1_Assets ./assets/.) Step 4 may fail unless you"
-            echo "       add Newton example assets under newton/newton/examples/assets/, or use"
-            echo "       --skip_filter / omit --position-randomize."
-            echo ""
-        fi
     fi
 }
 
@@ -116,7 +126,7 @@ OPTIONS:
     --skip_filter           Skip post-processing filters
 
   General:
-    --skip_asset_check      Skip checking ./assets before run (experts only)
+    --skip_asset_check      Skip checking HF assets before run (experts only)
     --help                  Show this help
 HELP
     exit 0
@@ -142,6 +152,9 @@ done
 
 verify_sim1_assets
 
+# Match Python sim1_asset_paths.py: subprocesses read the same HF bundle root
+export SIM1_ASSETS_ROOT="$(resolve_assets_root)"
+
 # ── Resolve paths ────────────────────────────────────────────
 if [[ ! "$DATA_FOLDER" = /* ]]; then
     DATA_FOLDER="${PROJECT_ROOT}/${DATA_FOLDER}"
@@ -154,6 +167,7 @@ echo ""
 echo "============================================================"
 echo "  SIM1 data generation pipeline"
 echo "============================================================"
+echo "  HF assets    : $SIM1_ASSETS_ROOT  (override: export SIM1_ASSETS_ROOT=...)"
 echo "  Data folder  : $DATA_FOLDER"
 echo "  Trajectories : $NUM"
 echo "  Position randomization (replay): $POSITION_RANDOMIZE"
@@ -227,16 +241,24 @@ echo "  Session dir  : $LATEST_SESSION"
 
 # ── Step 4: Filter ───────────────────────────────────────────
 if ! $SKIP_FILTER; then
+    # Joint jump / first-frame mutation (always). EE FK check only with --position-randomize.
+    echo ">>> [4/4] Filtering joint discontinuities (jump + first-5-frame mutation) ..."
     if $POSITION_RANDOMIZE; then
-        # ── 4a: EE reachability filter (rigid-transform mode) ──
-        echo ">>> [4/4] Filtering unreachable EE trajectories ..."
         python "${PROJECT_ROOT}/scripts/filter_joint_unreachable.py" \
             "${LATEST_SESSION}/npz" \
             --usd-dir "${LATEST_SESSION}/usd" \
             --workers "$WORKERS"
-        echo ""
+    else
+        python "${PROJECT_ROOT}/scripts/filter_joint_unreachable.py" \
+            "${LATEST_SESSION}/npz" \
+            --usd-dir "${LATEST_SESSION}/usd" \
+            --workers "$WORKERS" \
+            --no-check-ee
+    fi
+    echo ""
 
-        # ── 4b: Cloth quality filter (aligned via Kabsch) ──
+    if $POSITION_RANDOMIZE; then
+        # ── Cloth quality filter (aligned via Kabsch) ──
         echo ">>> [4/4] Filtering by cloth quality (aligned mode) ..."
         if [[ -n "$REF_USD" ]]; then
             REF_USD_PATH="$REF_USD"

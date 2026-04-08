@@ -1,6 +1,14 @@
 import os
+import sys
 import numpy as np
 from tqdm import tqdm
+
+# Repo root (for sim1_asset_paths — HF bundle: model/flow_ckpt_three.pth)
+_DATAGEN_DIR = os.path.dirname(os.path.abspath(__file__))
+_REPO_ROOT = os.path.dirname(os.path.dirname(_DATAGEN_DIR))
+if _REPO_ROOT not in sys.path:
+    sys.path.insert(0, _REPO_ROOT)
+from sim1_asset_paths import get_flow_ckpt_three_path
 
 from components.function import fk, solve_ik
 from components.datagen.splitter import  Splitter, SplitterFine
@@ -51,8 +59,12 @@ class DataGenerator:
             DiffusionUNet = UNet().to(device) 
             flow = simpleDiffusion(DiffusionUNet).to(device)
 
-            current_dir = os.path.dirname(os.path.abspath(__file__))
-            ckpt_path = os.path.join(current_dir, "traj_df", "output", "flow_ckpt_three.pth")
+            ckpt_path = get_flow_ckpt_three_path()
+            if not os.path.isfile(ckpt_path):
+                raise FileNotFoundError(
+                    f"Missing diffusion checkpoint: {ckpt_path}\n"
+                    "Run `bash download_assets.sh` or set SIM1_ASSETS_ROOT to your Hugging Face bundle."
+                )
             flow.load(ckpt_path)
             self.flow = flow
             self.fm_his_len = 1

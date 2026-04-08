@@ -6,6 +6,12 @@ Convert simulation Step-4 output (**`lmdb/` + `meta_info.pkl`**) into a **LeRobo
 
 ## One-shot workflow
 
+`run_local.sh` runs **three** stages by default:
+
+1. **LMDB → LeRobot** (`lmdb2lerobot_arx_sim.py`)
+2. **sim2real** parquet post-process (`sim2real.py`) — skip with `--skip-sim2real`
+3. **Remove near-static frames** (`remove_static_frames.py`, in-place on the dataset) — skip with `--keep-static-frames`
+
 ### 1. Environment (once)
 
 ```bash
@@ -28,19 +34,22 @@ bash components/lmdb2lerobot/run_local.sh \
 
 - **`--src`**: full `out_updated` tree, or a single episode folder that contains `lmdb/`.
 - **`--out`**: LeRobot dataset root; removed and recreated if it already exists.
+- **Static frames**: removed automatically after step 2 (tune with `--static-threshold-ratio`, `--static-workers`; use `--keep-static-frames` to keep all frames).
 
 More flags: `bash components/lmdb2lerobot/run_local.sh --help`
 
 ---
 
-## Optional — drop near-static frames (common for VLA)
+## Manual — remove_static_frames only
 
-After conversion, you can trim timesteps with little change in `observation.state` (edits `data/` parquet, trims `videos/` MP4s, refreshes `meta/`). **Back up the dataset first.**
+If you already have a LeRobot dataset and want to trim static frames **without** re-running the full script (or to re-run with different thresholds):
 
 ```bash
 conda activate lerobot
 python components/lmdb2lerobot/remove_static_frames.py /path/to/lerobot_dataset
 ```
+
+**Back up the dataset first** — this edits parquet, videos, and `meta/` in place.
 
 ---
 
