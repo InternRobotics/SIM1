@@ -132,10 +132,9 @@ Matches the startup prompt in [`apps/teleoperation_app.py`](apps/teleoperation_a
 
 | Key | Action |
 |---|---|
-| `W/S`, `A/D`, `Q/E`, `X` | Left gripper: front/back, left/right, down/up, toggle grip |
-| `I/K`, `J/L`, `U/O`, `M` | Right gripper: front/back, left/right, down/up, toggle grip |
+| `W/S`, `A/D`, `Q/E`, `X`, `Z/C` | Left gripper: front/back, left/right, down/up, toggle grip, pitch |
+| `U/J`, `H/K`, `Y/I`, `N`, `B/M` | Right gripper: front/back, left/right, down/up, toggle grip, pitch |
 | Arrow keys, mouse left-drag, scroll | Camera: move, look, zoom |
-| `H`, `Space`, `3/4/5`, `ESC`, `R` | Other: toggle UI, pause, camera presets, quit, full reset |
 
 ### WebSocket Streaming (Remote Teleoperation)
 
