@@ -1,5 +1,5 @@
 # SIM1
-# Sim1
+
 
 Dual-arm cloth manipulation in simulation: teleoperation, diffusion-based data generation, replay, filtering, and optional photorealistic rendering (built on [Newton](https://newton-physics.github.io/newton/) and NVIDIA [Warp](https://nvidia.github.io/warp/)).
 
