@@ -125,22 +125,26 @@ python apps/teleoperation_app.py --task lift_manip_shirt
 
 ### Keyboard Controls
 
+与 [`apps/teleoperation_app.py`](apps/teleoperation_app.py) 启动时打印的说明一致（shields 样式与上方 [Demo](https://sim1-demo.intern-robotics.com/) 徽章一致）：
+
 | Key | Action |
 |---|---|
-| W / S | Left arm forward / back |
-| A / D | Left arm left / right |
-| Q / E | Left arm down / up |
-| X | Toggle left gripper |
-| I / K | Right arm forward / back |
-| J / L | Right arm left / right |
-| U / O | Right arm down / up |
-| M | Toggle right gripper |
-| Arrow keys | Move camera |
-| Mouse drag | Look around |
-| Scroll | Zoom |
-| Space | Pause / resume |
-| R | Full reset (restarts process) |
-| ESC | Quit |
+| ![W/S](https://img.shields.io/badge/W%2FS-0366d6?style=flat&logo=googlechrome&logoColor=white) | Left gripper: forward / back |
+| ![A/D](https://img.shields.io/badge/A%2FD-0366d6?style=flat&logo=googlechrome&logoColor=white) | Left gripper: left / right |
+| ![Q/E](https://img.shields.io/badge/Q%2FE-0366d6?style=flat&logo=googlechrome&logoColor=white) | Left gripper: down / up |
+| ![X](https://img.shields.io/badge/X-0366d6?style=flat&logo=googlechrome&logoColor=white) | Toggle left gripper |
+| ![I/K](https://img.shields.io/badge/I%2FK-0366d6?style=flat&logo=googlechrome&logoColor=white) | Right gripper: forward / back |
+| ![J/L](https://img.shields.io/badge/J%2FL-0366d6?style=flat&logo=googlechrome&logoColor=white) | Right gripper: left / right |
+| ![U/O](https://img.shields.io/badge/U%2FO-0366d6?style=flat&logo=googlechrome&logoColor=white) | Right gripper: down / up |
+| ![M](https://img.shields.io/badge/M-0366d6?style=flat&logo=googlechrome&logoColor=white) | Toggle right gripper |
+| ![Arrow](https://img.shields.io/badge/Arrow%20keys-0366d6?style=flat&logo=googlechrome&logoColor=white) | Move camera |
+| ![Mouse](https://img.shields.io/badge/Mouse%20drag-0366d6?style=flat&logo=googlechrome&logoColor=white) | Look around (left button drag) |
+| ![Scroll](https://img.shields.io/badge/Scroll-0366d6?style=flat&logo=googlechrome&logoColor=white) | Zoom |
+| ![H](https://img.shields.io/badge/H-0366d6?style=flat&logo=googlechrome&logoColor=white) | Toggle UI |
+| ![Space](https://img.shields.io/badge/Space-0366d6?style=flat&logo=googlechrome&logoColor=white) | Pause / resume |
+| ![345](https://img.shields.io/badge/3%20%2F%204%20%2F%205-0366d6?style=flat&logo=googlechrome&logoColor=white) | Camera presets |
+| ![R](https://img.shields.io/badge/R-0366d6?style=flat&logo=googlechrome&logoColor=white) | Full reset (restarts process) |
+| ![ESC](https://img.shields.io/badge/ESC-0366d6?style=flat&logo=googlechrome&logoColor=white) | Quit |
 
 ### WebSocket Streaming (Remote Teleoperation)
 
