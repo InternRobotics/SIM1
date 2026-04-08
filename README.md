@@ -1,10 +1,25 @@
 # SIM1: Physics-Aligned Simulator as Zero-Shot Data Scaler in Deformable Worlds
 
-![SIM1 real2sim2real](doc/real2sim2real.gif)
+> [!IMPORTANT]
+> 🌟 Stay up to date at the [SIM1 project page](https://internrobotics.github.io/sim1.github.io/) and [InternRobotics](https://github.com/InternRobotics)!
 
-A research project from [InternRobotics](https://github.com/InternRobotics).
+<div id="top" align="center">
+
+<p align="center">
+  <video src="doc/real2sim2real.mp4" controls playsinline width="100%" style="max-width: 960px;"></video>
+</p>
+
+**SIM1:** *Physics-aligned simulation and data scaling for **deformable** dual-arm cloth manipulation*
+
+</div>
+
+<div align="center">
 
 [![Demo](https://img.shields.io/badge/Demo-SIM1-0366d6?style=flat&logo=googlechrome&logoColor=white)](https://sim1-demo.intern-robotics.com/) [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE) [![arXiv](https://img.shields.io/badge/arXiv-coming%20soon-b31b1b.svg)](https://arxiv.org/) [![Project Page](https://img.shields.io/badge/Project%20Page-SIM1-0366d6?style=flat&logo=githubpages&logoColor=white)](https://internrobotics.github.io/sim1.github.io/) [![Hugging Face · Assets](https://img.shields.io/badge/🤗%20Sim1-Assets-yellow)](https://huggingface.co/InternRobotics/Sim1_Assets) [![Hugging Face · Dataset](https://img.shields.io/badge/🤗%20Sim1-Dataset-yellow)](https://huggingface.co/datasets/InternRobotics/Sim1_Dataset)
+
+</div>
+
+A research project from [InternRobotics](https://github.com/InternRobotics).
 
 [YouTube 1](https://youtu.be/tsPLa-1Lygw) · [YouTube 2](https://youtu.be/LXStHGWHh18) · [YouTube 3](https://youtu.be/zesn7aK9sgQ)
 
