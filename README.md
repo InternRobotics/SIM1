@@ -1,23 +1,8 @@
 # SIM1: Physics-Aligned Simulator as Zero-Shot Data Scaler in Deformable Worlds
 
-> [!IMPORTANT]
-> 🌟 Stay up to date at the [SIM1 project page](https://internrobotics.github.io/sim1.github.io/) and [InternRobotics](https://github.com/InternRobotics)!
-
-<div id="top" align="center">
-
-**SIM1:** *Physics-aligned simulation and data scaling for **deformable** dual-arm cloth manipulation*
-
-</div>
-
-<div align="center">
+[![SIM1 YouTube demo video](https://i.ytimg.com/vi/6-6bNqglC2s/maxresdefault.jpg)](https://youtu.be/6-6bNqglC2s)
 
 [![Demo](https://img.shields.io/badge/Demo-SIM1-0366d6?style=flat&logo=googlechrome&logoColor=white)](https://sim1-demo.intern-robotics.com/) [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE) [![arXiv](https://img.shields.io/badge/arXiv-coming%20soon-b31b1b.svg)](https://arxiv.org/) [![Project Page](https://img.shields.io/badge/Project%20Page-SIM1-0366d6?style=flat&logo=githubpages&logoColor=white)](https://internrobotics.github.io/sim1.github.io/) [![Hugging Face · Assets](https://img.shields.io/badge/🤗%20Sim1-Assets-yellow)](https://huggingface.co/InternRobotics/Sim1_Assets) [![Hugging Face · Dataset](https://img.shields.io/badge/🤗%20Sim1-Dataset-yellow)](https://huggingface.co/datasets/InternRobotics/Sim1_Dataset)
-
-</div>
-
-<!-- real2sim2real demo video -->
-
-https://github.com/InternRobotics/sim1.github.io/blob/main/videos/real2sim2real.mp4
 
 A research project from [InternRobotics](https://github.com/InternRobotics).
 
@@ -140,26 +125,14 @@ python apps/teleoperation_app.py --task lift_manip_shirt
 
 ### Keyboard Controls
 
-与 [`apps/teleoperation_app.py`](apps/teleoperation_app.py) 启动时打印的说明一致（shields 样式与上方 [Demo](https://sim1-demo.intern-robotics.com/) 徽章一致）：
+Matches the startup prompt in [`apps/teleoperation_app.py`](apps/teleoperation_app.py) (using the same shields style as the [Demo](https://sim1-demo.intern-robotics.com/) badge above):
 
 | Key | Action |
 |---|---|
-| ![W/S](https://img.shields.io/badge/W%2FS-0366d6?style=flat&logo=googlechrome&logoColor=white) | Left gripper: forward / back |
-| ![A/D](https://img.shields.io/badge/A%2FD-0366d6?style=flat&logo=googlechrome&logoColor=white) | Left gripper: left / right |
-| ![Q/E](https://img.shields.io/badge/Q%2FE-0366d6?style=flat&logo=googlechrome&logoColor=white) | Left gripper: down / up |
-| ![X](https://img.shields.io/badge/X-0366d6?style=flat&logo=googlechrome&logoColor=white) | Toggle left gripper |
-| ![I/K](https://img.shields.io/badge/I%2FK-0366d6?style=flat&logo=googlechrome&logoColor=white) | Right gripper: forward / back |
-| ![J/L](https://img.shields.io/badge/J%2FL-0366d6?style=flat&logo=googlechrome&logoColor=white) | Right gripper: left / right |
-| ![U/O](https://img.shields.io/badge/U%2FO-0366d6?style=flat&logo=googlechrome&logoColor=white) | Right gripper: down / up |
-| ![M](https://img.shields.io/badge/M-0366d6?style=flat&logo=googlechrome&logoColor=white) | Toggle right gripper |
-| ![Arrow](https://img.shields.io/badge/Arrow%20keys-0366d6?style=flat&logo=googlechrome&logoColor=white) | Move camera |
-| ![Mouse](https://img.shields.io/badge/Mouse%20drag-0366d6?style=flat&logo=googlechrome&logoColor=white) | Look around (left button drag) |
-| ![Scroll](https://img.shields.io/badge/Scroll-0366d6?style=flat&logo=googlechrome&logoColor=white) | Zoom |
-| ![H](https://img.shields.io/badge/H-0366d6?style=flat&logo=googlechrome&logoColor=white) | Toggle UI |
-| ![Space](https://img.shields.io/badge/Space-0366d6?style=flat&logo=googlechrome&logoColor=white) | Pause / resume |
-| ![345](https://img.shields.io/badge/3%20%2F%204%20%2F%205-0366d6?style=flat&logo=googlechrome&logoColor=white) | Camera presets |
-| ![R](https://img.shields.io/badge/R-0366d6?style=flat&logo=googlechrome&logoColor=white) | Full reset (restarts process) |
-| ![ESC](https://img.shields.io/badge/ESC-0366d6?style=flat&logo=googlechrome&logoColor=white) | Quit |
+| `W/S`, `A/D`, `Q/E`, `X` | Left gripper: front/back, left/right, down/up, toggle grip |
+| `I/K`, `J/L`, `U/O`, `M` | Right gripper: front/back, left/right, down/up, toggle grip |
+| Arrow keys, mouse left-drag, scroll | Camera: move, look, zoom |
+| `H`, `Space`, `3/4/5`, `ESC`, `R` | Other: toggle UI, pause, camera presets, quit, full reset |
 
 ### WebSocket Streaming (Remote Teleoperation)
 
