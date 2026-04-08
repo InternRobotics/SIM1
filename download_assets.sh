@@ -29,8 +29,7 @@ download_asset_repo() {
         echo "[SIM1] Using huggingface-cli for ${ASSET_REPO} ..."
         huggingface-cli download "$ASSET_REPO" \
             --repo-type model \
-            --local-dir "$DEST" \
-            --quiet
+            --local-dir "$DEST"
         return 0
     fi
 
@@ -38,8 +37,7 @@ download_asset_repo() {
         echo "[SIM1] Using hf download for ${ASSET_REPO} ..."
         hf download "$ASSET_REPO" \
             --repo-type model \
-            --local-dir "$DEST" \
-            --quiet
+            --local-dir "$DEST"
         return 0
     fi
 
@@ -65,14 +63,13 @@ download_dataset_subset_git() {
     tmp_dir="$(mktemp -d)"
     trap 'rm -rf "$tmp_dir"' RETURN
 
-    echo "[SIM1] Cloning dataset repo (sparse, quiet): ${repo_url}"
-    # Keep output compact: disable clone progress and avoid LFS smudge during checkout.
-    GIT_LFS_SKIP_SMUDGE=1 git clone --quiet --depth 1 --filter=blob:none --sparse "$repo_url" "$tmp_dir/repo"
-    git -C "$tmp_dir/repo" sparse-checkout set "$DATASET_SUBDIR" >/dev/null 2>&1
+    echo "[SIM1] Cloning dataset repo (sparse): ${repo_url}"
+    git clone --depth 1 --filter=blob:none --sparse "$repo_url" "$tmp_dir/repo"
+    git -C "$tmp_dir/repo" sparse-checkout set "$DATASET_SUBDIR"
 
     # If Git LFS is available, explicitly fetch files under the selected subdir.
     if command -v git-lfs >/dev/null 2>&1 || git -C "$tmp_dir/repo" lfs version >/dev/null 2>&1; then
-        git -C "$tmp_dir/repo" lfs pull --include "${DATASET_SUBDIR}/*" >/dev/null 2>&1 || true
+        git -C "$tmp_dir/repo" lfs pull --include "${DATASET_SUBDIR}/*" || true
     fi
 
     mkdir -p "$DEST/$DATASET_SUBDIR"
