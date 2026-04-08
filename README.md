@@ -82,11 +82,7 @@ Simulation, `run_pipeline.sh`, and the render stack all read the same Hugging Fa
 - `InternRobotics/Sim1_Assets` (full model assets bundle), and
 - `InternRobotics/Sim1_Dataset/sim_teleoperated_npz/**` only (reference NPZ subset for DataGen).
 
-If you use `bash download_assets.sh /other/path`, set `SIM1_ASSETS_ROOT` to that same path (the script prints a suggested `export` line when it finishes):
-
-```bash
-export SIM1_ASSETS_ROOT=/absolute/or/relative/path   # parent directory containing acone/, cloth/, random/, model/, etc.
-```
+Use the default destination `./assets` and run directly; no manual path configuration is required.
 
 Download the official bundle from Hugging Face (`InternRobotics/Sim1_Assets`) into `./assets/`:
 
@@ -156,7 +152,7 @@ Then open `http://<server-ip>:8080` in a browser to view and control the simulat
 
 ## Quick Start — Data Generation
 
-`run_pipeline.sh` runs the full data path in one shot: generate → Kalman smooth → replay (NPZ + USD) → filter. Generation uses the diffusion-policy path; robot URDF and cloth USD come from the Hugging Face bundle (default `./assets/`, or `SIM1_ASSETS_ROOT`; see [Step 4 — Download assets](#step-4--download-assets)). The script prints `HF assets : …` on startup. For extra diversity at replay, add `--position-randomize`.
+`run_pipeline.sh` runs the full data path in one shot: generate → Kalman smooth → replay (NPZ + USD) → filter. Generation uses the diffusion-policy path; robot URDF and cloth USD come from the default Hugging Face bundle location `./assets/` (see [Step 4 - Download assets](#step-4--download-assets)). The script prints `HF assets : …` on startup. For extra diversity at replay, add `--position-randomize`.
 
 ### Generate data
 

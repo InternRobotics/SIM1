@@ -69,6 +69,28 @@ resolve_assets_root() {
     fi
 }
 
+# ── Normalize HF layout under assets/ ────────────────────────
+# Some HF download methods create:
+#   <root>/assets/{acone,cloth,random,...}
+# while others place files directly under:
+#   <root>/{acone,cloth,random,...}
+# To keep SIM1_ASSETS_ROOT stable, create compatibility symlinks when needed.
+normalize_assets_layout() {
+    local root="$1"
+    local nested="${root}/assets"
+    if [[ ! -d "${nested}" ]]; then
+        return 0
+    fi
+
+    local name
+    for name in acone cloth random model; do
+        if [[ -d "${nested}/${name}" && ! -e "${root}/${name}" ]]; then
+            ln -sfn "assets/${name}" "${root}/${name}"
+            echo "  Linked ${root}/${name} -> assets/${name}"
+        fi
+    done
+}
+
 # ── Resolve default reference-data folder for DataGen ─────────
 resolve_default_data_folder() {
     local candidate="${SIM1_ASSETS_ROOT}/sim_teleoperated_npz"
@@ -188,14 +210,15 @@ verify_sim1_assets() {
     fi
     local ASSETS_ROOT
     ASSETS_ROOT="$(resolve_assets_root)"
+    normalize_assets_layout "${ASSETS_ROOT}"
     export SIM1_ASSETS_ROOT="${ASSETS_ROOT}"
     local missing=0
     if [[ ! -f "${ASSETS_ROOT}/acone/acone.urdf" ]]; then
-        echo "[ERROR] Missing: ${ASSETS_ROOT}/acone/acone.urdf"
+        echo "[ERROR] Missing: ${ASSETS_ROOT}/assets/acone/acone.urdf"
         missing=1
     fi
     if [[ ! -f "${ASSETS_ROOT}/cloth/short-shirt.usdc" ]]; then
-        echo "[ERROR] Missing: ${ASSETS_ROOT}/cloth/short-shirt.usdc"
+        echo "[ERROR] Missing: ${ASSETS_ROOT}/assets/cloth/short-shirt.usdc"
         missing=1
     fi
     if [[ ! -f "${ASSETS_ROOT}/model/flow_ckpt_three.pth" ]]; then
