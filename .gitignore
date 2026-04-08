@@ -10,7 +10,7 @@ build/
 
 # ── Data & Assets (large files) ──
 recordings/
-*.mp4
+
 *.npy
 *.bin
 *.lmd
