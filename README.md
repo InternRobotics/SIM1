@@ -1,10 +1,6 @@
 # SIM1: Physics-Aligned Simulator as Zero-Shot Data Scaler in Deformable Worlds
 
-<p align="center">
-  <video src="docs/teaserv4.mp4" autoplay loop muted playsinline width="85%"></video>
-</p>
-
-*Teaser: copy your exported MP4 to `docs/teaserv4.mp4` in this repo, or change `src` to a hosted file URL (GitHub Releases, CDN, etc.). Browsers require `muted` for autoplay.*
+<video src="doc/real2sim2real.mp4" controls width="100%"></video>
 
 A research project from [InternRobotics](https://github.com/InternRobotics).
 
