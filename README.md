@@ -7,11 +7,12 @@
 
 <p align="center">
   <video controls playsinline width="100%" style="max-width: 960px;">
-    <source src="https://raw.githubusercontent.com/InternRobotics/SIM1/doc/real2sim2real.mp4" type="video/mp4" />
-    <source src="https://github.com/InternRobotics/SIM1/raw/main/doc/real2sim2real.mp4" type="video/mp4" />
+    <source src="https://raw.githubusercontent.com/InternRobotics/sim1.github.io/main/videos/real2sim2real.mp4" type="video/mp4" />
+    <source src="https://internrobotics.github.io/sim1.github.io/videos/real2sim2real.mp4" type="video/mp4" />
   </video>
 </p>
 
+**SIM1:** *Physics-aligned simulation and data scaling for **deformable** dual-arm cloth manipulation*
 
 </div>
 
