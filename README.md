@@ -2,9 +2,9 @@
 
 A research project from [InternRobotics](https://github.com/InternRobotics).
 
-[![GitHub](https://img.shields.io/badge/GitHub-SIM1-181717?style=flat&logo=github)](https://github.com/InternRobotics/SIM1) [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE) [![arXiv](https://img.shields.io/badge/arXiv-coming%20soon-b31b1b.svg)](https://arxiv.org/) [![Hugging Face](https://img.shields.io/badge/🤗%20Sim1-Assets-yellow)](https://huggingface.co/InternRobotics/Sim1_Assets)
+[![GitHub](https://img.shields.io/badge/GitHub-SIM1-181717?style=flat&logo=github)](https://github.com/InternRobotics/SIM1) [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE) [![arXiv](https://img.shields.io/badge/arXiv-coming%20soon-b31b1b.svg)](https://arxiv.org/) [![Hugging Face · Assets](https://img.shields.io/badge/🤗%20Sim1-Assets-yellow)](https://huggingface.co/InternRobotics/Sim1_Assets) [![Hugging Face · Dataset](https://img.shields.io/badge/🤗%20Sim1-Dataset-yellow)](https://huggingface.co/datasets/InternRobotics/Sim1_Dataset)
 
-[[Project Page](https://internrobotics.github.io/sim1.github.io/)] [[Paper](https://arxiv.org/)] [[Code](https://github.com/InternRobotics/SIM1)] [[Assets · 🤗](https://huggingface.co/InternRobotics/Sim1_Assets)] [[Dataset · 🤗](https://huggingface.co/datasets/InternRobotics/Sim1_Dataset)] [[Video · YouTube 1](https://youtu.be/tsPLa-1Lygw)] [[Video · YouTube 2](https://youtu.be/LXStHGWHh18)] [[Video · YouTube 3](https://youtu.be/zesn7aK9sgQ)]
+[Project Page](https://internrobotics.github.io/sim1.github.io/) · [YouTube 1](https://youtu.be/tsPLa-1Lygw) · [YouTube 2](https://youtu.be/LXStHGWHh18) · [YouTube 3](https://youtu.be/zesn7aK9sgQ)
 
 **Sim1** is a **physics-aligned simulator** and data stack for dual-arm **cloth manipulation** in simulation: **teleoperation**, **diffusion-based data generation**, **replay**, **filtering**, and optional **photorealistic rendering**, built on [Newton](https://newton-physics.github.io/newton/) and NVIDIA [Warp](https://nvidia.github.io/warp/). This repository contains the full pipeline from interactive control and synthetic trajectory generation to rendering and LeRobot-style dataset export.
 
