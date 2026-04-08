@@ -1,9 +1,12 @@
-# SIM1
+# SIM1: Physics-Aligned Simulator as Zero-Shot Data Scaler in Deformable Worlds
 
+A research project from [InternRobotics](https://github.com/InternRobotics).
 
-Dual-arm cloth manipulation in simulation: teleoperation, diffusion-based data generation, replay, filtering, and optional photorealistic rendering (built on [Newton](https://newton-physics.github.io/newton/) and NVIDIA [Warp](https://nvidia.github.io/warp/)).
+[![GitHub](https://img.shields.io/badge/GitHub-SIM1-181717?style=flat&logo=github)](https://github.com/InternRobotics/SIM1) [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE) [![arXiv](https://img.shields.io/badge/arXiv-coming%20soon-b31b1b.svg)](https://arxiv.org/) [![Hugging Face](https://img.shields.io/badge/🤗%20Sim1-Assets-yellow)](https://huggingface.co/InternRobotics/Sim1_Assets)
 
-**Resources:** [Code (GitHub)](https://github.com/InternRobotics/SIM1) · [Paper (arXiv)](https://arxiv.org/) · [Sim1 assets (Hugging Face)](https://huggingface.co/InternRobotics/Sim1_Assets) · [Sim1 dataset (Hugging Face)](https://huggingface.co/datasets/InternRobotics/Sim1_Dataset) · [Video (YouTube)](https://youtu.be/tsPLa-1Lygw)
+[[Project Page](https://internrobotics.github.io/sim1.github.io/)] [[Paper](https://arxiv.org/)] [[Code](https://github.com/InternRobotics/SIM1)] [[Assets · 🤗](https://huggingface.co/InternRobotics/Sim1_Assets)] [[Dataset · 🤗](https://huggingface.co/datasets/InternRobotics/Sim1_Dataset)] [[Video · YouTube 1](https://youtu.be/tsPLa-1Lygw)] [[Video · YouTube 2](https://youtu.be/LXStHGWHh18)] [[Video · YouTube 3](https://youtu.be/zesn7aK9sgQ)]
+
+**Sim1** is a **physics-aligned simulator** and data stack for dual-arm **cloth manipulation** in simulation: **teleoperation**, **diffusion-based data generation**, **replay**, **filtering**, and optional **photorealistic rendering**, built on [Newton](https://newton-physics.github.io/newton/) and NVIDIA [Warp](https://nvidia.github.io/warp/). This repository contains the full pipeline from interactive control and synthetic trajectory generation to rendering and LeRobot-style dataset export.
 
 ---
 
