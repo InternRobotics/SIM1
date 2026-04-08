@@ -83,15 +83,7 @@ All Python dependencies (simulation, DataGen, asset download helpers, optional f
 
 ### Step 4 - Download assets (required before data generation)
 
-Simulation, `run_pipeline.sh`, and the render stack all read the same Hugging Face bundle root. By default that is `./assets/` at the repo root (what `download_assets.sh` uses). The canonical resolver is `sim1_asset_paths.py`.
-
-`download_assets.sh` now downloads:
-- `InternRobotics/Sim1_Assets` (full model assets bundle), and
-- `InternRobotics/Sim1_Dataset/sim_teleoperated_npz/**` only (reference NPZ subset for DataGen).
-
-Use the default destination `./assets` and run directly; no manual path configuration is required.
-
-Download the official bundle from Hugging Face (`InternRobotics/Sim1_Assets`) into `./assets/`:
+Run the download script once from the repository root. It downloads required assets into `assets/`.
 
 ```bash
 # From the repository root (after setup.sh)
@@ -159,7 +151,7 @@ Then open `http://<server-ip>:8080` in a browser to view and control the simulat
 
 ## Quick Start — Data Generation
 
-`run_pipeline.sh` runs the full data path in one shot: generate → Kalman smooth → replay (NPZ + USD) → filter. Generation uses the diffusion-policy path; robot URDF and cloth USD come from the default Hugging Face bundle location `./assets/` (see [Step 4 - Download assets](#step-4--download-assets)). The script prints `HF assets : …` on startup. For extra diversity at replay, add `--position-randomize`.
+`run_pipeline.sh` runs the full data path in one shot: generate → Kalman smooth → replay (NPZ + USD) → filter. Generation uses the diffusion-policy path; robot URDF and cloth USD come from the default Hugging Face bundle location `assets/` (see [Step 4 - Download assets](#step-4--download-assets)). The script prints `HF assets : …` on startup. For extra diversity at replay, add `--position-randomize`.
 
 ### Generate data
 
@@ -221,9 +213,9 @@ replay/
 <details>
 <summary>Manual step-by-step (only if you are not using <code>run_pipeline.sh</code>)</summary>
 
-1. Generate: `python apps/datagen_app.py --data_folder ./assets/sim_teleoperated_npz --num 100 --use_dp --mode fine`  
-2. Smooth: `python scripts/smooth_trajectory_multi_thread.py ./assets/sim_teleoperated_npz/gen ./assets/sim_teleoperated_npz/gen/kf --method kalman --workers 8`  
-3. Replay: `python apps/replay_app.py ./assets/sim_teleoperated_npz/gen/kf --folder_name my_replay`  
+1. Generate: `python apps/datagen_app.py --data_folder assets/sim_teleoperated_npz --num 100 --use_dp --mode fine`  
+2. Smooth: `python scripts/smooth_trajectory_multi_thread.py assets/sim_teleoperated_npz/gen assets/sim_teleoperated_npz/gen/kf --method kalman --workers 8`  
+3. Replay: `python apps/replay_app.py assets/sim_teleoperated_npz/gen/kf --folder_name my_replay`  
 Optional cloth position randomization at replay: add `--position-randomize` (then use the matching manual filters as in Step 4 above).  
 4a. Joint / EE filter: `python scripts/filter_joint_unreachable.py ./replay/my_replay_0001/npz --usd-dir ./replay/my_replay_0001/usd --workers 8` (add `--no-check-ee` to skip EE FK; joint checks always run)  
 4b. Cloth quality: `python scripts/filter_cloth_quality.py ./replay/my_replay_0001` (add `--ref-usd ...` if you used randomization)
@@ -251,7 +243,7 @@ bash components/render/batch_step4.sh ./replay/my_run_0001
 
 ### Asset Configuration
 
-Rendering resolves the HF bundle via `SIM1_ASSETS_ROOT` (default `<repo>/assets/`). HDRI / table / cloth glTF roots default to `assets/random/{bg,table,mat}/` inside that bundle (`sim1_asset_paths.py`); no extra `export` is required for the usual layout.
+Rendering resolves the HF bundle via `SIM1_ASSETS_ROOT` (default `<repo>/assets/`). HDRI / table / cloth glTF roots default to `assets/random/{bg,table,mat}/` inside that bundle (`scripts/sim1_asset_paths.py`); no extra `export` is required for the usual layout.
 
 ---
 
@@ -285,7 +277,7 @@ Batch / multi-GPU (optional): `components/lmdb2lerobot/run_batch.sh` — see [`c
 ```
 sim1/
 ├── setup.sh                    # Dependency installation (setup.sh)
-├── download_assets.sh          # Hugging Face -> ./assets/ (Sim1_Assets + Sim1_Dataset/sim_teleoperated_npz only)
+├── download_assets.sh          # Hugging Face -> assets/ (Sim1_Assets + Sim1_Dataset/sim_teleoperated_npz only)
 ├── run_pipeline.sh             # Data generation pipeline (generate→smooth→replay→filter)
 ├── apps/
 │   ├── teleoperation_app.py    # Interactive teleoperation entry point

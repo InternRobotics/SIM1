@@ -49,6 +49,10 @@ dataset/
 /assets/
 assets/
 
+# Keep Newton example assets tracked
+!newton/newton/examples/assets/
+!newton/newton/examples/assets/**
+
 
 # ── Virtual Environments ──
 .venv/

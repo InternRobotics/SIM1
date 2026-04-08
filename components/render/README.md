@@ -55,7 +55,7 @@ Logs: `/tmp/sim1_worker_*.log`, `/tmp/sim1_step4_worker_*.log`.
 
 ## Assets
 
-Robot URDF plus scene assets (HDRI, glTF tables/materials) are resolved from **`SIM1_ASSETS_ROOT`** (default `<repo>/assets/`). Step 3 uses **`random/{bg,table,mat}/`** under that root by default — see **`sim1_asset_paths.py`** at the repo root. Set **`SIM1_BG_ROOT`**, **`SIM1_TABLE_ROOT`**, or **`SIM1_MAT_ROOT`** only if you need non-default paths.
+Robot URDF plus scene assets (HDRI, glTF tables/materials) are resolved from **`SIM1_ASSETS_ROOT`** (default `<repo>/assets/`). Step 3 uses **`random/{bg,table,mat}/`** under that root by default — see **`scripts/sim1_asset_paths.py`**. Set **`SIM1_BG_ROOT`**, **`SIM1_TABLE_ROOT`**, or **`SIM1_MAT_ROOT`** only if you need non-default paths.
 
 ---
 
