@@ -85,7 +85,7 @@ Simulation, `run_pipeline.sh`, and the render stack all read the same Hugging Fa
 If you use `bash download_assets.sh /other/path`, set `SIM1_ASSETS_ROOT` to that same path (the script prints a suggested `export` line when it finishes):
 
 ```bash
-export SIM1_ASSETS_ROOT=/absolute/or/relative/path   # parent directory containing acone/, cloth/, random/, model/, etc.
+export SIM1_ASSETS_ROOT=./assets   # parent directory containing acone/, cloth/, random/, model/, etc.
 ```
 
 Download the official bundle from Hugging Face (`InternRobotics/Sim1_Assets`) into `./assets/`:
