@@ -82,8 +82,8 @@ TORCH_INDEX_URL="${TORCH_INDEX_URL:-https://download.pytorch.org/whl/cu124}"
 python -m pip install torch==2.6.0 torchvision==0.21.0 torchaudio==2.6.0 --index-url "${TORCH_INDEX_URL}"
 
 echo ""
-echo "[Info] Installing DataGen --use_dp dependencies (einops, rotary-embedding-torch, diffusers)..."
-python -m pip install einops rotary-embedding-torch diffusers
+echo "[Info] Installing DataGen dependencies required by run_pipeline/datagen (einops, rotary-embedding-torch, diffusers)..."
+python -m pip install -U einops rotary-embedding-torch diffusers
 
 # ─── Step 4: Other Python dependencies ─────────────────────
 echo ""

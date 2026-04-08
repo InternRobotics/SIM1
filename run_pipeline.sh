@@ -74,7 +74,7 @@ resolve_assets_root() {
 #   <root>/assets/{acone,cloth,random,...}
 # while others place files directly under:
 #   <root>/{acone,cloth,random,...}
-# To keep SIM1_ASSETS_ROOT stable, create compatibility symlinks when needed.
+# Keep <root> flat by moving nested folders (no symlinks).
 normalize_assets_layout() {
     local root="$1"
     local nested="${root}/assets"
@@ -85,10 +85,11 @@ normalize_assets_layout() {
     local name
     for name in acone cloth random model; do
         if [[ -d "${nested}/${name}" && ! -e "${root}/${name}" ]]; then
-            ln -sfn "assets/${name}" "${root}/${name}"
-            echo "  Linked ${root}/${name} -> assets/${name}"
+            mv "${nested}/${name}" "${root}/${name}"
+            echo "  Moved ${nested}/${name} -> ${root}/${name}"
         fi
     done
+    rmdir "${nested}" 2>/dev/null || true
 }
 
 # ── Resolve default reference-data folder for DataGen ─────────
@@ -137,12 +138,11 @@ ensure_datagen_npz_layout() {
     fi
 
     mkdir -p "${npz_dir}"
-    local f b
+    local f
     for f in "${direct_npz[@]}"; do
-        b="$(basename "$f")"
-        ln -sfn "../${b}" "${npz_dir}/${b}"
+        mv "${f}" "${npz_dir}/"
     done
-    echo "  Prepared reference view: ${npz_dir} (symlinks to ${root}/*.npz)"
+    echo "  Normalized reference NPZ layout: ${npz_dir}/*.npz"
 }
 
 verify_reference_npz() {
@@ -214,11 +214,11 @@ verify_sim1_assets() {
     export SIM1_ASSETS_ROOT="${ASSETS_ROOT}"
     local missing=0
     if [[ ! -f "${ASSETS_ROOT}/acone/acone.urdf" ]]; then
-        echo "[ERROR] Missing: ${ASSETS_ROOT}/assets/acone/acone.urdf"
+        echo "[ERROR] Missing: ${ASSETS_ROOT}/acone/acone.urdf"
         missing=1
     fi
     if [[ ! -f "${ASSETS_ROOT}/cloth/short-shirt.usdc" ]]; then
-        echo "[ERROR] Missing: ${ASSETS_ROOT}/assets/cloth/short-shirt.usdc"
+        echo "[ERROR] Missing: ${ASSETS_ROOT}/cloth/short-shirt.usdc"
         missing=1
     fi
     if [[ ! -f "${ASSETS_ROOT}/model/flow_ckpt_three.pth" ]]; then
