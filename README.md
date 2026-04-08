@@ -78,10 +78,6 @@ All Python dependencies (simulation, DataGen, asset download helpers, optional f
 
 Simulation, `run_pipeline.sh`, and the render stack all read the same Hugging Face bundle root. By default that is `./assets/` at the repo root (what `download_assets.sh` uses). The canonical resolver is `sim1_asset_paths.py`; override the root with:
 
-```bash
-export SIM1_ASSETS_ROOT=/absolute/or/relative/path   # parent of acone/, cloth/, random/, model/, …
-```
-
 If you use `bash download_assets.sh /other/path`, set `SIM1_ASSETS_ROOT` to that same path (the script prints a suggested `export` line when it finishes).
 
 Download the official bundle from Hugging Face (`InternRobotics/Sim1_Assets`) into `./assets/`:
@@ -322,15 +318,10 @@ sim1/
 
 ## TODO List
 
-### Completed
-
 - [x] Simulation assets — Robot URDFs, cloth meshes, render assets on Hugging Face ([Sim1 assets](https://huggingface.co/InternRobotics/Sim1_Assets)); see [Download assets](#step-4--download-assets) and `download_assets.sh`.
 - [x] Public datasets — Pre-generated trajectories / rendered data ([Sim1 dataset](https://huggingface.co/datasets/InternRobotics/Sim1_Dataset)) and related releases.
 - [x] Data generation pipeline — Generate → smooth → replay → filter with `run_pipeline.sh`; optional `--position-randomize` ([Quick Start — Data Generation](#quick-start--data-generation)).
 - [x] Training utilities — Policy / trajectory code under `module_train/` (e.g. discriminator, generator).
-
-### Planned
-
 - [ ] Upgrade to latest Newton — Bump bundled `newton/` to upstream; adapt API changes in envs/tasks/components.
 - [ ] Integrate libuipc solver — Optional [libuipc](https://github.com/libuipc/libuipc) cloth/deformable backend for richer contact and friction.
 
