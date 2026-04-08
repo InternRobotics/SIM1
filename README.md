@@ -70,15 +70,23 @@ conda activate sim1
 bash setup.sh
 ```
 
-All Python dependencies (simulation, DataGen, asset download helpers, optional full render stack, and post-install checks) are installed by [`setup.sh`](setup.sh) only. Open that file for the full list, optional environment variables (`SIM1_SKIP_RENDER`, `TORCH_INDEX_URL`), and the exact `pip` commands. If you want to install a separate environment (for example render-only) or see which package each render step uses, refer to [`components/render/README.md`](components/render/README.md).
+All Python dependencies (simulation, DataGen, asset download helpers, optional full render stack, and post-install checks) are installed by [`setup.sh`](setup.sh) only. No separate render dependency install is required. Open that file for the full list, optional environment variables (`SIM1_SKIP_RENDER`, `TORCH_INDEX_URL`), and the exact `pip` commands. For render usage notes (not dependency installation), see [`components/render/README.md`](components/render/README.md).
 
 ---
 
-### Step 4 — Download assets (required before data generation)
+### Step 4 - Download assets (required before data generation)
 
-Simulation, `run_pipeline.sh`, and the render stack all read the same Hugging Face bundle root. By default that is `./assets/` at the repo root (what `download_assets.sh` uses). The canonical resolver is `sim1_asset_paths.py`; override the root with:
+Simulation, `run_pipeline.sh`, and the render stack all read the same Hugging Face bundle root. By default that is `./assets/` at the repo root (what `download_assets.sh` uses). The canonical resolver is `sim1_asset_paths.py`.
 
-If you use `bash download_assets.sh /other/path`, set `SIM1_ASSETS_ROOT` to that same path (the script prints a suggested `export` line when it finishes).
+`download_assets.sh` now downloads:
+- `InternRobotics/Sim1_Assets` (full model assets bundle), and
+- `InternRobotics/Sim1_Dataset/sim_teleoperated_npz/**` only (reference NPZ subset for DataGen).
+
+If you use `bash download_assets.sh /other/path`, set `SIM1_ASSETS_ROOT` to that same path (the script prints a suggested `export` line when it finishes):
+
+```bash
+export SIM1_ASSETS_ROOT=/absolute/or/relative/path   # parent directory containing acone/, cloth/, random/, model/, etc.
+```
 
 Download the official bundle from Hugging Face (`InternRobotics/Sim1_Assets`) into `./assets/`:
 
@@ -107,7 +115,11 @@ python newton/examples/robot/example_robot_humanoid.py
 
 Equivalent: `python -m newton.examples robot_humanoid` (from the same `newton/` directory). The MJCF asset is `newton/examples/assets/nv_humanoid.xml`.
 
-After `bash download_assets.sh`, you should see at least `assets/acone/acone.urdf`, `assets/cloth/short-shirt.usdc`, and `assets/model/flow_ckpt_three.pth` before running `run_pipeline.sh`.
+After `bash download_assets.sh`, you should see at least:
+- `assets/acone/acone.urdf`
+- `assets/cloth/short-shirt.usdc`
+- `assets/model/flow_ckpt_three.pth`
+- `assets/sim_teleoperated_npz/` (reference NPZ subset)
 
 ---
 
@@ -156,14 +168,15 @@ bash run_pipeline.sh --num 100
 
 Optional: `bash run_pipeline.sh --num 100 --position-randomize`
 
-You get trajectories under `./dataset/example/` and a replay session `replay/pipeline_output_XXXX/` (the script prints the path). Use that folder as `--root_dir` for [Rendering Pipeline](#rendering-pipeline).
+By default, DataGen reads references from `assets/sim_teleoperated_npz` (downloaded from Hugging Face). You can override the reference source with `--ref_npz_folder`. Generated trajectories are written under `--data_folder` (`gen/`, `gen/kf/`). Replay outputs are saved under `replay/pipeline_output_XXXX/` (the script prints the path). Use that session folder as `--root_dir` for [Rendering Pipeline](#rendering-pipeline).
 
 <details>
 <summary>All <code>run_pipeline.sh</code> options (advanced)</summary>
 
 | Option | Description | Default |
 |---|---|---|
-| `--data_folder DIR` | Data root | `./dataset/example` |
+| `--data_folder DIR` | Output data root (`gen/`, `gen/kf/`) | with `--ref_npz_folder`: `./dataset/example`; otherwise auto: `<SIM1_ASSETS_ROOT>/sim_teleoperated_npz` (fallback `./dataset/example`) |
+| `--ref_npz_folder DIR` | Reference NPZ source for DataGen (`<DIR>/npz/*.npz` or `<DIR>/*.npz`) | unset (use `--data_folder` layout) |
 | `--num N` | Trajectories to generate (DP pipeline only) | 10 |
 | `--workers N` | Parallel workers (smooth + filters) | 8 |
 | `--skip_smooth` / `--skip_replay` / `--skip_filter` | Skip a stage | off |
@@ -205,9 +218,9 @@ replay/
 <details>
 <summary>Manual step-by-step (only if you are not using <code>run_pipeline.sh</code>)</summary>
 
-1. Generate: `python apps/datagen_app.py --data_folder ./dataset/example --num 100 --use_dp --mode fine`  
-2. Smooth: `python scripts/smooth_trajectory_multi_thread.py ./dataset/example/gen ./dataset/example/gen/kf --method kalman --workers 8`  
-3. Replay: `python apps/replay_app.py ./dataset/example/gen/kf --folder_name my_replay`  
+1. Generate: `python apps/datagen_app.py --data_folder ./assets/sim_teleoperated_npz --num 100 --use_dp --mode fine`  
+2. Smooth: `python scripts/smooth_trajectory_multi_thread.py ./assets/sim_teleoperated_npz/gen ./assets/sim_teleoperated_npz/gen/kf --method kalman --workers 8`  
+3. Replay: `python apps/replay_app.py ./assets/sim_teleoperated_npz/gen/kf --folder_name my_replay`  
 Optional cloth position randomization at replay: add `--position-randomize` (then use the matching manual filters as in Step 4 above).  
 4a. Joint / EE filter: `python scripts/filter_joint_unreachable.py ./replay/my_replay_0001/npz --usd-dir ./replay/my_replay_0001/usd --workers 8` (add `--no-check-ee` to skip EE FK; joint checks always run)  
 4b. Cloth quality: `python scripts/filter_cloth_quality.py ./replay/my_replay_0001` (add `--ref-usd ...` if you used randomization)
@@ -222,7 +235,7 @@ Convert simulation USD output to photorealistic data: `main.py` runs Steps 1–3
 
 MeisterRender lives in the git submodule `components/render/MeisterRender` ([InternRobotics/SIM1MeisterRender](https://github.com/InternRobotics/SIM1MeisterRender), `main`). Use `git clone --recurse-submodules` in [Step 2](#step-2--clone-the-repository) so it is checked out automatically.
 
-Environment: use the same `sim1` env; the render stack is installed by `setup.sh` unless you set `SIM1_SKIP_RENDER=1` (see comments in `setup.sh`). For a separate install or per-step package notes, see [`components/render/README.md`](components/render/README.md).
+Environment: use the same `sim1` env; the render stack is installed by `setup.sh` unless you set `SIM1_SKIP_RENDER=1` (see comments in `setup.sh`). For render usage and step notes, see [`components/render/README.md`](components/render/README.md).
 
 ```bash
 conda activate sim1
@@ -269,7 +282,7 @@ Batch / multi-GPU (optional): `components/lmdb2lerobot/run_batch.sh` — see [`c
 ```
 sim1/
 ├── setup.sh                    # Dependency installation (setup.sh)
-├── download_assets.sh          # Hugging Face → ./assets/ (InternRobotics/Sim1_Assets)
+├── download_assets.sh          # Hugging Face -> ./assets/ (Sim1_Assets + Sim1_Dataset/sim_teleoperated_npz only)
 ├── run_pipeline.sh             # Data generation pipeline (generate→smooth→replay→filter)
 ├── apps/
 │   ├── teleoperation_app.py    # Interactive teleoperation entry point

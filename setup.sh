@@ -33,7 +33,7 @@
 #   - torch, torchvision, torchaudio (TORCH_INDEX_URL, default CUDA 12.4 / cu124)
 #   - einops, rotary-embedding-torch, diffusers (DataGen --use_dp)
 #   - numpy, scipy, matplotlib, opencv-python-headless, Pillow, tqdm, lmdb, imageio[ffmpeg], huggingface_hub
-#   - unless SIM1_SKIP_RENDER=1: components/render/requirement.txt + MeisterRender/requirements.txt
+#   - unless SIM1_SKIP_RENDER=1: render packages (yourdfpy/imageio/lmdb/bpy/minexr/omegaconf/opencv-python/...)
 # ============================================================
 
 set -e
@@ -100,25 +100,37 @@ else
     echo ""
     echo "============================================================"
     echo "  SIM1 render stack (components/render/) — default install"
-    echo "  pip: requirement.txt (+ MeisterRender/requirements.txt)"
+    echo "  pip: all render deps from setup.sh (no separate install needed)"
     echo "============================================================"
-    RENDER_REQ="${PROJECT_ROOT}/components/render/requirement.txt"
-    if [ ! -f "${RENDER_REQ}" ]; then
-        echo "  Warning: Missing ${RENDER_REQ}"
-    else
-        echo ""
-        echo "[Render] pip install -r components/render/requirement.txt ..."
-        python -m pip install -r "${RENDER_REQ}"
-        echo ""
-        echo "[Render] Verifying MeisterRender (step4_render_acone.py) import ..."
-        python -c "
+    echo ""
+    echo "[Render] Installing Steps 1-4 dependencies..."
+    # Inline all render dependencies here so users only run setup.sh once.
+    # Step 1-3:
+    #   yourdfpy, tqdm
+    # Step 4 + MeisterRender:
+    #   imageio[ffmpeg], lmdb, bpy, minexr, omegaconf, opencv-python
+    python -m pip install \
+        yourdfpy \
+        tqdm \
+        "imageio[ffmpeg]" \
+        lmdb \
+        "bpy==4.5" \
+        "minexr==1.0.2" \
+        "omegaconf==2.3.0" \
+        "opencv-python==4.10.0.84"
+
+    echo ""
+    echo "[Render] Verifying MeisterRender (step4_render_acone.py) import ..."
+    python -c "
 import os, sys
 root = r'${PROJECT_ROOT}/components/render/MeisterRender'
-sys.path.insert(0, root)
-from api import RenderEngine
-print('  MeisterRender RenderEngine OK')
+if os.path.isdir(root):
+    sys.path.insert(0, root)
+    from api import RenderEngine
+    print('  MeisterRender RenderEngine OK')
+else:
+    print('  Warning: MeisterRender submodule not found; run git submodule update --init --recursive')
 " || echo "  Warning: MeisterRender import check failed."
-    fi
 fi
 
 # ─── Verify installation ───────────────────────────────────

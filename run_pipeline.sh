@@ -40,7 +40,11 @@ PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 export CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-0}"
 
 # ── Defaults ──────────────────────────────────────────────────
-DATA_FOLDER="./dataset/example"
+# If --data_folder is not provided, auto-resolve to:
+#   1) <SIM1_ASSETS_ROOT>/sim_teleoperated_npz (downloaded from HF dataset subset)
+#   2) fallback: <repo>/dataset/example
+DATA_FOLDER=""
+REF_NPZ_FOLDER=""
 NUM=10
 WORKERS=8
 FOLDER_NAME="pipeline_output"
@@ -63,6 +67,118 @@ resolve_assets_root() {
     else
         echo "${PROJECT_ROOT}/${SIM1_ASSETS_ROOT}"
     fi
+}
+
+# ── Resolve default reference-data folder for DataGen ─────────
+resolve_default_data_folder() {
+    local candidate="${SIM1_ASSETS_ROOT}/sim_teleoperated_npz"
+    if [[ -d "${candidate}" ]]; then
+        echo "${candidate}"
+    else
+        echo "${PROJECT_ROOT}/dataset/example"
+    fi
+}
+
+resolve_npz_dir() {
+    # Accept either:
+    #   A) <root>/npz/*.npz
+    #   B) <root>/*.npz
+    local root="$1"
+    local npz_sub="${root}/npz"
+    if [[ -d "${npz_sub}" ]]; then
+        echo "${npz_sub}"
+        return 0
+    fi
+    shopt -s nullglob
+    local direct_npz=("${root}"/*.npz)
+    shopt -u nullglob
+    if [[ ${#direct_npz[@]} -gt 0 ]]; then
+        echo "${root}"
+        return 0
+    fi
+    return 1
+}
+
+# ── Ensure DataGen-compatible layout: <data_folder>/npz/*.npz ─
+ensure_datagen_npz_layout() {
+    local root="$1"
+    local npz_dir="${root}/npz"
+    if [[ -d "${npz_dir}" ]]; then
+        return 0
+    fi
+
+    shopt -s nullglob
+    local direct_npz=("${root}"/*.npz)
+    shopt -u nullglob
+    if [[ ${#direct_npz[@]} -eq 0 ]]; then
+        return 0
+    fi
+
+    mkdir -p "${npz_dir}"
+    local f b
+    for f in "${direct_npz[@]}"; do
+        b="$(basename "$f")"
+        ln -sfn "../${b}" "${npz_dir}/${b}"
+    done
+    echo "  Prepared reference view: ${npz_dir} (symlinks to ${root}/*.npz)"
+}
+
+verify_reference_npz() {
+    # DataGen needs reference npz under <data_folder>/npz.
+    if $SKIP_DATAGEN; then
+        return 0
+    fi
+
+    local npz_dir="${DATA_FOLDER}/npz"
+    if [[ ! -d "${npz_dir}" ]]; then
+        echo "[ERROR] Reference NPZ directory not found: ${npz_dir}"
+        echo "        Run: bash download_assets.sh"
+        echo "        Expected HF subset: InternRobotics/Sim1_Dataset/sim_teleoperated_npz"
+        exit 1
+    fi
+
+    shopt -s nullglob
+    local files=("${npz_dir}"/*.npz)
+    shopt -u nullglob
+    if [[ ${#files[@]} -eq 0 ]]; then
+        echo "[ERROR] No .npz files found in: ${npz_dir}"
+        echo "        Run: bash download_assets.sh"
+        exit 1
+    fi
+}
+
+prepare_reference_npz_link() {
+    # If user provides --ref_npz_folder, link its npz source into <data_folder>/npz
+    # so datagen keeps using the expected layout.
+    if [[ -z "${REF_NPZ_FOLDER}" ]]; then
+        return 0
+    fi
+
+    local src_root="$REF_NPZ_FOLDER"
+    if [[ ! "$src_root" = /* ]]; then
+        src_root="${PROJECT_ROOT}/${src_root}"
+    fi
+    if [[ ! -d "${src_root}" ]]; then
+        echo "[ERROR] --ref_npz_folder does not exist: ${src_root}"
+        exit 1
+    fi
+
+    local resolved_src=""
+    if ! resolved_src="$(resolve_npz_dir "${src_root}")"; then
+        echo "[ERROR] --ref_npz_folder has no .npz data: ${src_root}"
+        echo "        Expected either <ref_npz_folder>/npz/*.npz or <ref_npz_folder>/*.npz"
+        exit 1
+    fi
+
+    mkdir -p "${DATA_FOLDER}"
+    local target_npz="${DATA_FOLDER}/npz"
+    if [[ -e "${target_npz}" && ! -L "${target_npz}" ]]; then
+        echo "[ERROR] ${target_npz} exists and is not a symlink."
+        echo "        Please remove it or choose a different --data_folder."
+        exit 1
+    fi
+    ln -sfn "${resolved_src}" "${target_npz}"
+    echo "  Using reference NPZ from: ${resolved_src}"
 }
 
 # ── Verify SIM1 assets (URDF/cloth from HF bundle; see SIM1_ASSETS_ROOT) ──
@@ -106,7 +222,17 @@ USAGE:
 
 OPTIONS:
   Data Generation:
-    --data_folder DIR       Root folder for input/output data (default: ./dataset/example)
+    --data_folder DIR       Data root for generated outputs (gen/, gen/kf/).
+                            If omitted:
+                              - with --ref_npz_folder: <repo>/dataset/example
+                              - otherwise: auto-detect
+                                <SIM1_ASSETS_ROOT>/sim_teleoperated_npz
+                                (fallback <repo>/dataset/example)
+    --ref_npz_folder DIR    Reference NPZ source for DataGen.
+                            Accepts either:
+                              <DIR>/npz/*.npz
+                              <DIR>/*.npz
+                            If set, run_pipeline links it to <data_folder>/npz.
     --num N                 Number of trajectories to generate (default: 10)
     --skip_datagen          Skip trajectory generation (use existing data)
 
@@ -135,6 +261,7 @@ HELP
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --data_folder)       DATA_FOLDER="$2"; shift 2 ;;
+        --ref_npz_folder)    REF_NPZ_FOLDER="$2"; shift 2 ;;
         --num)               NUM="$2"; shift 2 ;;
         --workers)           WORKERS="$2"; shift 2 ;;
         --folder_name)       FOLDER_NAME="$2"; shift 2 ;;
@@ -155,10 +282,32 @@ verify_sim1_assets
 # Match Python sim1_asset_paths.py: subprocesses read the same HF bundle root
 export SIM1_ASSETS_ROOT="$(resolve_assets_root)"
 
+# Auto-select DataGen reference source when --data_folder is omitted.
+if [[ -z "${DATA_FOLDER}" ]]; then
+    if [[ -n "${REF_NPZ_FOLDER}" ]]; then
+        DATA_FOLDER="${PROJECT_ROOT}/dataset/example"
+    else
+        DATA_FOLDER="$(resolve_default_data_folder)"
+    fi
+fi
+
 # ── Resolve paths ────────────────────────────────────────────
 if [[ ! "$DATA_FOLDER" = /* ]]; then
     DATA_FOLDER="${PROJECT_ROOT}/${DATA_FOLDER}"
 fi
+
+# Reference NPZ source:
+#   - explicit --ref_npz_folder (preferred when provided)
+#   - otherwise infer from --data_folder layout
+prepare_reference_npz_link
+if [[ -z "${REF_NPZ_FOLDER}" ]]; then
+    # Accept both layouts:
+    #   A) <data_folder>/npz/*.npz  (native)
+    #   B) <data_folder>/*.npz      (HF subset folder root)
+    ensure_datagen_npz_layout "$DATA_FOLDER"
+fi
+verify_reference_npz
+
 GEN_DIR="${DATA_FOLDER}/gen"
 SMOOTH_DIR="${GEN_DIR}/kf"
 
@@ -169,6 +318,10 @@ echo "  SIM1 data generation pipeline"
 echo "============================================================"
 echo "  HF assets    : $SIM1_ASSETS_ROOT  (override: export SIM1_ASSETS_ROOT=...)"
 echo "  Data folder  : $DATA_FOLDER"
+if [[ -n "${REF_NPZ_FOLDER}" ]]; then
+echo "  Ref source   : $REF_NPZ_FOLDER"
+fi
+echo "  Ref NPZ dir  : ${DATA_FOLDER}/npz"
 echo "  Trajectories : $NUM"
 echo "  Position randomization (replay): $POSITION_RANDOMIZE"
 if $POSITION_RANDOMIZE; then
