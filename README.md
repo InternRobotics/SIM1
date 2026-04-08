@@ -1,6 +1,6 @@
 # SIM1: Physics-Aligned Simulator as Zero-Shot Data Scaler in Deformable Worlds
 
-<video src="doc/real2sim2real.mp4" controls width="100%"></video>
+![SIM1 real2sim2real](doc/real2sim2real.gif)
 
 A research project from [InternRobotics](https://github.com/InternRobotics).
 
