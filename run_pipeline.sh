@@ -1,0 +1,284 @@
+#!/bin/bash
+# ============================================================
+# SIM1 data generation pipeline (run_pipeline.sh)
+#
+# Unified script that chains the full data-generation workflow:
+#   1. Generate trajectories  (datagen_app.py)
+#   2. Kalman-smooth           (smooth_trajectory_multi_thread.py)
+#   3. Replay                  (replay_app.py)
+#   4. Filter bad trajectories (rigid-transform aware)
+#
+# The user chooses whether to enable cloth position randomization at replay.
+# The script automatically runs the matching
+# filter pipeline:
+#   - No randomization  →  cloth quality filter only
+#   - With randomization →  EE reachability filter first,
+#                           then cloth quality filter (aligned)
+#
+# Prerequisite (once): download SIM1 assets from Hugging Face into ./assets/
+#   bash download_assets.sh
+# Simulation code loads <repo>/assets/ automatically — you do not pass asset paths here.
+#
+# Usage:
+#   bash run_pipeline.sh [OPTIONS]
+#
+# Examples:
+#   bash download_assets.sh          # once per machine / after clone
+#   bash run_pipeline.sh --num 10  # generate 10 trajectories, no cloth position randomization
+#
+#   # With cloth position randomization at replay (±2cm XY, ±15° Z)
+#   bash run_pipeline.sh --num 50 --position-randomize
+#
+#   # Custom data folder & session name
+#   bash run_pipeline.sh --num 20 --data_folder ./dataset/my_task \
+#                        --folder_name my_session --workers 16
+# ============================================================
+
+set -euo pipefail
+
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+export CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-0}"
+
+# ── Defaults ──────────────────────────────────────────────────
+DATA_FOLDER="./dataset/example"
+NUM=10
+WORKERS=8
+FOLDER_NAME="pipeline_output"
+POSITION_RANDOMIZE=false
+REF_USD=""
+SKIP_DATAGEN=false
+SKIP_SMOOTH=false
+SKIP_REPLAY=false
+SKIP_FILTER=false
+SKIP_ASSET_CHECK=false
+
+# ── Verify SIM1 assets (simulation reads <repo>/assets/ automatically) ──
+verify_sim1_assets() {
+    if $SKIP_ASSET_CHECK; then
+        return 0
+    fi
+    local missing=0
+    if [[ ! -f "${PROJECT_ROOT}/assets/acone/acone.urdf" ]]; then
+        echo "[ERROR] Missing: ${PROJECT_ROOT}/assets/acone/acone.urdf"
+        missing=1
+    fi
+    if [[ ! -f "${PROJECT_ROOT}/assets/cloth/short-shirt.usdc" ]]; then
+        echo "[ERROR] Missing: ${PROJECT_ROOT}/assets/cloth/short-shirt.usdc"
+        missing=1
+    fi
+    if [[ $missing -ne 0 ]]; then
+        echo ""
+        echo "Download SIM1 assets from Hugging Face into ./assets/ (repo root), then re-run:"
+        echo "  bash download_assets.sh"
+        echo ""
+        exit 1
+    fi
+    if $POSITION_RANDOMIZE && ! $SKIP_FILTER; then
+        local lift2="${PROJECT_ROOT}/newton/newton/examples/assets/lift2_collision/lift2_collision.urdf"
+        if [[ ! -f "$lift2" ]]; then
+            echo "[WARN] EE reachability filter expects Newton example URDF:"
+            echo "       $lift2"
+            echo "       (Not part of InternRobotics/Sim1_Assets ./assets/.) Step 4 may fail unless you"
+            echo "       add Newton example assets under newton/newton/examples/assets/, or use"
+            echo "       --skip_filter / omit --position-randomize."
+            echo ""
+        fi
+    fi
+}
+
+# ── Parse arguments ──────────────────────────────────────────
+print_help() {
+    cat <<'HELP'
+SIM1 data generation pipeline
+
+USAGE:
+    bash run_pipeline.sh [OPTIONS]
+
+OPTIONS:
+  Data Generation:
+    --data_folder DIR       Root folder for input/output data (default: ./dataset/example)
+    --num N                 Number of trajectories to generate (default: 10)
+    --skip_datagen          Skip trajectory generation (use existing data)
+
+  Smoothing:
+    --workers N             Parallel workers for smoothing & filtering (default: 8)
+    --skip_smooth           Skip trajectory smoothing
+
+  Replay:
+    --folder_name NAME      Session base name under replay/ (default: pipeline_output)
+    --position-randomize    Random cloth pose at replay (±2cm XY, ±15° yaw). Automatically
+                            runs EE-reachability filter + aligned cloth-quality filter.
+                            Omit → standard cloth-quality filter only.
+    --skip_replay           Skip replay
+
+  Filtering:
+    --ref_usd PATH          Reference USD for Kabsch alignment (auto-detected if omitted)
+    --skip_filter           Skip post-processing filters
+
+  General:
+    --skip_asset_check      Skip checking ./assets before run (experts only)
+    --help                  Show this help
+HELP
+    exit 0
+}
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --data_folder)       DATA_FOLDER="$2"; shift 2 ;;
+        --num)               NUM="$2"; shift 2 ;;
+        --workers)           WORKERS="$2"; shift 2 ;;
+        --folder_name)       FOLDER_NAME="$2"; shift 2 ;;
+        --position-randomize) POSITION_RANDOMIZE=true; shift ;;
+        --ref_usd)           REF_USD="$2"; shift 2 ;;
+        --skip_datagen)      SKIP_DATAGEN=true; shift ;;
+        --skip_smooth)       SKIP_SMOOTH=true; shift ;;
+        --skip_replay)       SKIP_REPLAY=true; shift ;;
+        --skip_filter)       SKIP_FILTER=true; shift ;;
+        --skip_asset_check) SKIP_ASSET_CHECK=true; shift ;;
+        --help|-h)           print_help ;;
+        *) echo "Unknown option: $1"; print_help ;;
+    esac
+done
+
+verify_sim1_assets
+
+# ── Resolve paths ────────────────────────────────────────────
+if [[ ! "$DATA_FOLDER" = /* ]]; then
+    DATA_FOLDER="${PROJECT_ROOT}/${DATA_FOLDER}"
+fi
+GEN_DIR="${DATA_FOLDER}/gen"
+SMOOTH_DIR="${GEN_DIR}/kf"
+
+# ── Banner ───────────────────────────────────────────────────
+echo ""
+echo "============================================================"
+echo "  SIM1 data generation pipeline"
+echo "============================================================"
+echo "  Data folder  : $DATA_FOLDER"
+echo "  Trajectories : $NUM"
+echo "  Position randomization (replay): $POSITION_RANDOMIZE"
+if $POSITION_RANDOMIZE; then
+echo "    (fixed ±2 cm XY, ±15° yaw on cloth at replay)"
+fi
+echo "  Workers      : $WORKERS"
+echo "  Session name : $FOLDER_NAME"
+echo "  GPU          : $CUDA_VISIBLE_DEVICES"
+echo "------------------------------------------------------------"
+echo "  Steps:"
+$SKIP_DATAGEN && echo "    1. Generate    [SKIP]" || echo "    1. Generate    ✓"
+$SKIP_SMOOTH  && echo "    2. Smooth      [SKIP]" || echo "    2. Smooth      ✓"
+$SKIP_REPLAY  && echo "    3. Replay      [SKIP]" || echo "    3. Replay      ✓"
+$SKIP_FILTER  && echo "    4. Filter      [SKIP]" || echo "    4. Filter      ✓  ($($POSITION_RANDOMIZE && echo 'EE reachability + cloth quality (aligned)' || echo 'cloth quality only'))"
+echo "============================================================"
+echo ""
+
+# ── Step 1: Generate ─────────────────────────────────────────
+if ! $SKIP_DATAGEN; then
+    echo ">>> [1/4] Generating $NUM trajectories (diffusion-policy / fine split) ..."
+    python "${PROJECT_ROOT}/apps/datagen_app.py" \
+        --data_folder "$DATA_FOLDER" \
+        --num "$NUM" \
+        --use_dp \
+        --mode fine
+    echo ">>> [1/4] Generation complete. Output: ${GEN_DIR}"
+    echo ""
+fi
+
+# ── Step 2: Smooth ───────────────────────────────────────────
+if ! $SKIP_SMOOTH; then
+    echo ">>> [2/4] Kalman-smoothing trajectories ..."
+    python "${PROJECT_ROOT}/scripts/smooth_trajectory_multi_thread.py" \
+        "$GEN_DIR" \
+        "$SMOOTH_DIR" \
+        --method kalman \
+        --process_variance 8e-6 \
+        --measurement_variance 2.5e-4 \
+        --workers "$WORKERS"
+    echo ">>> [2/4] Smoothing complete. Output: ${SMOOTH_DIR}"
+    echo ""
+fi
+
+# ── Step 3: Replay ───────────────────────────────────────────
+if ! $SKIP_REPLAY; then
+    echo ">>> [3/4] Replaying smoothed trajectories ..."
+    REPLAY_ARGS=("${PROJECT_ROOT}/apps/replay_app.py" "$SMOOTH_DIR" --folder_name "$FOLDER_NAME")
+    if $POSITION_RANDOMIZE; then
+        REPLAY_ARGS+=(--position-randomize)
+    fi
+    python "${REPLAY_ARGS[@]}"
+    echo ">>> [3/4] Replay complete."
+    echo ""
+fi
+
+# ── Detect the latest session directory ──────────────────────
+REPLAY_ROOT="${PROJECT_ROOT}/replay"
+LATEST_SESSION=""
+if [[ -d "$REPLAY_ROOT" ]]; then
+    LATEST_SESSION=$(ls -1d "${REPLAY_ROOT}/${FOLDER_NAME}_"[0-9][0-9][0-9][0-9] 2>/dev/null \
+                     | sort | tail -n1 || true)
+fi
+
+if [[ -z "$LATEST_SESSION" ]] && ! $SKIP_FILTER; then
+    echo "[ERROR] No session directory found under ${REPLAY_ROOT}/${FOLDER_NAME}_*"
+    echo "        Run replay first or check --folder_name."
+    exit 1
+fi
+echo "  Session dir  : $LATEST_SESSION"
+
+# ── Step 4: Filter ───────────────────────────────────────────
+if ! $SKIP_FILTER; then
+    if $POSITION_RANDOMIZE; then
+        # ── 4a: EE reachability filter (rigid-transform mode) ──
+        echo ">>> [4/4] Filtering unreachable EE trajectories ..."
+        python "${PROJECT_ROOT}/scripts/filter_joint_unreachable.py" \
+            "${LATEST_SESSION}/npz" \
+            --usd-dir "${LATEST_SESSION}/usd" \
+            --workers "$WORKERS"
+        echo ""
+
+        # ── 4b: Cloth quality filter (aligned via Kabsch) ──
+        echo ">>> [4/4] Filtering by cloth quality (aligned mode) ..."
+        if [[ -n "$REF_USD" ]]; then
+            REF_USD_PATH="$REF_USD"
+        else
+            REF_USD_PATH=$(ls -1 "${LATEST_SESSION}/usd/"*.usd 2>/dev/null | head -n1 || true)
+            if [[ -z "$REF_USD_PATH" ]]; then
+                echo "[WARN] No USD files found for --ref-usd auto-detection; skipping cloth filter."
+            else
+                echo "  Auto-detected ref USD: $REF_USD_PATH"
+            fi
+        fi
+        if [[ -n "$REF_USD_PATH" ]]; then
+            python "${PROJECT_ROOT}/scripts/filter_cloth_quality.py" \
+                "$LATEST_SESSION" \
+                --ref-usd "$REF_USD_PATH"
+        fi
+    else
+        # ── 4: Cloth quality filter (direct mode) ──
+        echo ">>> [4/4] Filtering by cloth quality (direct mode) ..."
+        python "${PROJECT_ROOT}/scripts/filter_cloth_quality.py" \
+            "$LATEST_SESSION"
+    fi
+    echo ">>> [4/4] Filtering complete."
+    echo ""
+fi
+
+# ── Summary ──────────────────────────────────────────────────
+echo "============================================================"
+echo "  Pipeline finished!"
+echo "============================================================"
+echo "  Session       : $LATEST_SESSION"
+if [[ -d "${LATEST_SESSION}/npz" ]]; then
+    NPZ_COUNT=$(ls -1 "${LATEST_SESSION}/npz/"*.npz 2>/dev/null | wc -l || echo 0)
+    echo "  Good trajs    : ${NPZ_COUNT} .npz files"
+fi
+echo ""
+echo "  Next steps:"
+echo "    # Render (Steps 1-3 + Step 4):"
+echo "    python components/render/main.py --root_dir ${LATEST_SESSION}"
+echo "    bash components/render/batch_step4.sh ${LATEST_SESSION}"
+echo ""
+echo "    # Convert to LeRobot dataset:"
+echo "    bash components/lmdb2lerobot/run_local.sh \\"
+echo "      --src ${LATEST_SESSION}/out_updated --out ${LATEST_SESSION}/lerobot_dataset"
+echo "============================================================"

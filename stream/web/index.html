@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Teleoperation Controller</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #f0f2f5;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    user-select: none;
+  }
+  .container {
+    display: flex;
+    align-items: center;
+    gap: 28px;
+    padding: 20px;
+    max-width: 1200px;
+    width: 100%;
+  }
+
+  /* === Keyboard Panel === */
+  .arm-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    min-width: 170px;
+  }
+  .arm-label {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: #3b5bdb;
+    margin-bottom: 2px;
+  }
+  .key-row { display: flex; gap: 6px; }
+  .key {
+    width: 46px;
+    height: 46px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+    font-weight: 700;
+    color: #495057;
+    background: #fff;
+    border: 1.5px solid #dee2e6;
+    box-shadow: 0 2px 0 #ced4da;
+    transition: all 0.06s ease;
+  }
+  .key.active {
+    background: #3b5bdb;
+    color: #fff;
+    border-color: #364fc7;
+    box-shadow: 0 0 0 #ced4da;
+    transform: translateY(2px);
+  }
+  .key.grip-key { border-color: #e03131; }
+  .key.grip-key.active { background: #e03131; border-color: #c92a2a; }
+  .axis-hint {
+    font-size: 11px;
+    color: #868e96;
+    margin-top: 4px;
+    text-align: center;
+    line-height: 1.6;
+  }
+
+  /* === Central Display === */
+  .display-wrapper {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+  .display-frame {
+    width: 100%;
+    max-width: 720px;
+    aspect-ratio: 16 / 9;
+    border-radius: 14px;
+    overflow: hidden;
+    border: 3px solid #e03131;
+    background: #1a1a2e;
+    position: relative;
+    transition: border-color .3s;
+  }
+  .display-frame.connected { border-color: #3b5bdb; }
+  .display-frame canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  /* Overlays */
+  .overlay-text, .queue-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    text-align: center;
+    pointer-events: none;
+  }
+  .overlay-text h2 {
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    text-shadow: 0 2px 8px rgba(0,0,0,.5);
+  }
+  .overlay-text p { font-size: 13px; opacity: .85; margin-top: 5px; }
+  .overlay-text .sub { font-size: 11px; opacity: .6; margin-top: 8px; }
+  .overlay-text.hidden, .queue-overlay.hidden { display: none; }
+
+  .queue-overlay {
+    background: rgba(0,0,0,.55);
+    z-index: 10;
+    gap: 6px;
+  }
+  .queue-overlay .q-icon { font-size: 38px; }
+  .queue-overlay .q-title { font-size: 17px; font-weight: 700; }
+  .queue-overlay .q-pos {
+    font-size: 28px;
+    font-weight: 800;
+    color: #ffd43b;
+    margin: 4px 0;
+  }
+  .queue-overlay .q-hint { font-size: 12px; opacity: .7; }
+
+  /* === Control Bar === */
+  .control-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    max-width: 720px;
+    flex-wrap: wrap;
+  }
+  .ws-url-input {
+    flex: 1;
+    min-width: 160px;
+    padding: 7px 10px;
+    border: 1.5px solid #dee2e6;
+    border-radius: 8px;
+    font-size: 13px;
+    outline: none;
+    font-family: monospace;
+  }
+  .ws-url-input:focus { border-color: #3b5bdb; }
+
+  .btn {
+    padding: 7px 16px;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .15s;
+    white-space: nowrap;
+  }
+  .btn-connect { background: #3b5bdb; color: #fff; }
+  .btn-connect:hover { background: #364fc7; }
+  .btn-disconnect { background: #e03131; color: #fff; }
+  .btn-disconnect:hover { background: #c92a2a; }
+  .btn-reset { background: #f59f00; color: #fff; }
+  .btn-reset:hover { background: #e67700; }
+
+  .status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #adb5bd;
+    transition: background .3s;
+    flex-shrink: 0;
+  }
+  .status-dot.connected { background: #40c057; }
+  .status-text {
+    font-size: 12px;
+    color: #868e96;
+    white-space: nowrap;
+  }
+
+  /* === Stats === */
+  .stats-bar {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    width: 100%;
+    max-width: 720px;
+    justify-content: center;
+  }
+  .stat-badge {
+    font-size: 12px;
+    font-family: monospace;
+    color: #495057;
+    background: #e9ecef;
+    padding: 4px 12px;
+    border-radius: 6px;
+  }
+  .stat-badge.good  { color: #2b8a3e; background: #d3f9d8; }
+  .stat-badge.warn  { color: #e67700; background: #fff3bf; }
+  .stat-badge.bad   { color: #c92a2a; background: #ffe3e3; }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <!-- Left Arm -->
+  <div class="arm-panel">
+    <div class="arm-label">LEFT ARM</div>
+    <div class="key-row">
+      <div class="key" data-key="q">Q</div>
+      <div class="key" data-key="w">W</div>
+      <div class="key" data-key="e">E</div>
+    </div>
+    <div class="key-row">
+      <div class="key" data-key="a">A</div>
+      <div class="key" data-key="s">S</div>
+      <div class="key" data-key="d">D</div>
+    </div>
+    <div class="key-row">
+      <div class="key" data-key="z">Z</div>
+      <div class="key grip-key" data-key="x">X</div>
+      <div class="key" data-key="c">C</div>
+    </div>
+    <div class="axis-hint">
+      WS: Front / Back<br>
+      AD: Left / Right<br>
+      QE: Down / Up<br>
+      ZC: Pitch &nbsp;·&nbsp; <b>X</b>: Grip
+    </div>
+  </div>
+
+  <!-- Central Display -->
+  <div class="display-wrapper">
+    <div class="display-frame" id="displayFrame">
+      <canvas id="simCanvas"></canvas>
+      <div class="overlay-text" id="overlay">
+        <h2>DUAL-ARM TELEOPERATION</h2>
+        <p>Click Connect to start</p>
+        <p class="sub">Left: QWEASDZXC &nbsp;·&nbsp; Right: YUIHJKBNM</p>
+      </div>
+      <div class="queue-overlay hidden" id="queueOverlay">
+        <div class="q-icon">&#9203;</div>
+        <div class="q-title">Waiting in Queue</div>
+        <div class="q-pos" id="queuePos">#1 / 1</div>
+        <div class="q-hint">Current operator idle &gt; 2 min → auto-promoted</div>
+      </div>
+    </div>
+
+    <!-- Control bar -->
+    <div class="control-bar">
+      <input class="ws-url-input" id="wsUrl" type="text" placeholder="WebSocket URL">
+      <button class="btn btn-connect" id="connectBtn">Connect</button>
+      <button class="btn btn-reset" id="resetBtn">Reset</button>
+      <div class="status-dot" id="statusDot"></div>
+      <span class="status-text" id="statusText">Disconnected</span>
+    </div>
+
+    <!-- Stats bar -->
+    <div class="stats-bar">
+      <span class="stat-badge" id="fpsCounter">-- fps</span>
+      <span class="stat-badge" id="latencyDisplay">RTT: -- ms</span>
+      <span class="stat-badge" id="resDisplay">--</span>
+    </div>
+  </div>
+
+  <!-- Right Arm -->
+  <div class="arm-panel">
+    <div class="arm-label">RIGHT ARM</div>
+    <div class="key-row">
+      <div class="key" data-key="y">Y</div>
+      <div class="key" data-key="u">U</div>
+      <div class="key" data-key="i">I</div>
+    </div>
+    <div class="key-row">
+      <div class="key" data-key="h">H</div>
+      <div class="key" data-key="j">J</div>
+      <div class="key" data-key="k">K</div>
+    </div>
+    <div class="key-row">
+      <div class="key" data-key="b">B</div>
+      <div class="key grip-key" data-key="n">N</div>
+      <div class="key" data-key="m">M</div>
+    </div>
+    <div class="axis-hint">
+      UJ: Front / Back<br>
+      HK: Left / Right<br>
+      YI: Down / Up<br>
+      BM: Pitch &nbsp;·&nbsp; <b>N</b>: Grip
+    </div>
+  </div>
+</div>
+
+<script>
+const VALID_KEYS = new Set([
+  'q','w','e','a','s','d','z','x','c',
+  'y','u','i','h','j','k','b','n','m'
+]);
+const pressedKeys = new Set();
+let ws = null;
+let connected = false;
+let isActive = false;
+let frameCount = 0;
+let lastFpsTime = performance.now();
+let aspectRatioSet = false;
+let lastRtt = null;
+let rttSamples = [];
+let pendingReconnect = false;
+let reconnectTimer = null;
+
+const canvas       = document.getElementById('simCanvas');
+const ctx          = canvas.getContext('2d');
+const overlay      = document.getElementById('overlay');
+const queueOverlay = document.getElementById('queueOverlay');
+const queuePos     = document.getElementById('queuePos');
+const wsUrlIn      = document.getElementById('wsUrl');
+const connectBtn   = document.getElementById('connectBtn');
+const resetBtn     = document.getElementById('resetBtn');
+const dot          = document.getElementById('statusDot');
+const stxt         = document.getElementById('statusText');
+const fpsTxt       = document.getElementById('fpsCounter');
+const latDisp      = document.getElementById('latencyDisplay');
+const resDisp      = document.getElementById('resDisplay');
+const displayFrame = document.getElementById('displayFrame');
+const keyEls       = {};
+
+const wsHost = window.location.hostname || 'localhost';
+wsUrlIn.value = `ws://${wsHost}:8765`;
+
+document.querySelectorAll('.key').forEach(el => {
+  keyEls[el.dataset.key] = el;
+});
+
+// ── Canvas sizing ──
+function resizeCanvas() {
+  const rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width  = rect.width  * devicePixelRatio;
+  canvas.height = rect.height * devicePixelRatio;
+  ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+// ── Keyboard events ──
+document.addEventListener('keydown', e => {
+  const k = e.key.toLowerCase();
+  if (!VALID_KEYS.has(k)) return;
+  e.preventDefault();
+  if (pressedKeys.has(k)) return;
+  pressedKeys.add(k);
+  keyEls[k]?.classList.add('active');
+  sendKeys();
+});
+
+document.addEventListener('keyup', e => {
+  const k = e.key.toLowerCase();
+  if (!VALID_KEYS.has(k)) return;
+  e.preventDefault();
+  pressedKeys.delete(k);
+  keyEls[k]?.classList.remove('active');
+  sendKeys();
+});
+
+window.addEventListener('blur', () => {
+  pressedKeys.forEach(k => keyEls[k]?.classList.remove('active'));
+  pressedKeys.clear();
+  sendKeys();
+});
+
+function sendKeys() {
+  if (!ws || ws.readyState !== WebSocket.OPEN) return;
+  ws.send(JSON.stringify({
+    type: 'keys',
+    keys: [...pressedKeys],
+    timestamp: Date.now()
+  }));
+}
+
+// ── Reset ──
+resetBtn.addEventListener('click', () => {
+  if (!ws || ws.readyState !== WebSocket.OPEN || !isActive) return;
+  pendingReconnect = true;
+  resetBtn.disabled = true;
+  resetBtn.textContent = 'Resetting…';
+  overlay.classList.remove('hidden');
+  const titleEl = overlay.querySelector('h2');
+  const pEl = overlay.querySelector('p');
+  if (titleEl) titleEl.textContent = 'RESETTING';
+  if (pEl) pEl.textContent = 'Please wait for a fresh environment';
+  ws.send(JSON.stringify({ type: 'reset', timestamp: Date.now() }));
+});
+
+// ── Draw a received image onto the canvas ──
+function drawImage(img) {
+  if (!aspectRatioSet && img.naturalWidth > 0 && img.naturalHeight > 0) {
+    displayFrame.style.aspectRatio = `${img.naturalWidth} / ${img.naturalHeight}`;
+    resDisp.textContent = `${img.naturalWidth}\u00d7${img.naturalHeight}`;
+    resizeCanvas();
+    aspectRatioSet = true;
+  }
+  const w = canvas.width / devicePixelRatio;
+  const h = canvas.height / devicePixelRatio;
+  ctx.clearRect(0, 0, w, h);
+  ctx.drawImage(img, 0, 0, w, h);
+}
+
+// ── Receive frames & control messages ──
+function handleMessage(event) {
+  // Binary blob → JPEG frame
+  if (event.data instanceof Blob) {
+    frameCount++;
+    const url = URL.createObjectURL(event.data);
+    const img = new Image();
+    img.onload = () => { drawImage(img); URL.revokeObjectURL(url); };
+    img.src = url;
+    return;
+  }
+
+  // JSON messages
+  try {
+    const msg = JSON.parse(event.data);
+
+    if (msg.type === 'frame' && msg.data) {
+      frameCount++;
+      const img = new Image();
+      img.onload = () => drawImage(img);
+      img.src = 'data:image/jpeg;base64,' + msg.data;
+    }
+
+    if (msg.type === 'active') {
+      isActive = true;
+      queueOverlay.classList.add('hidden');
+      overlay.classList.add('hidden');
+      stxt.textContent = 'In Control';
+      resetBtn.disabled = false;
+      resetBtn.textContent = 'Reset';
+    }
+
+    if (msg.type === 'queue') {
+      isActive = false;
+      overlay.classList.add('hidden');
+      queueOverlay.classList.remove('hidden');
+      queuePos.textContent = `#${msg.position} / ${msg.total}`;
+      stxt.textContent = `Queue ${msg.position}/${msg.total}`;
+      resetBtn.disabled = true;
+    }
+
+    if (msg.type === 'kicked') {
+      isActive = false;
+      pendingReconnect = false;
+      stxt.textContent = 'Kicked (Idle)';
+    }
+
+    if (msg.type === 'pong' && msg.client_ts) {
+      const rtt = Date.now() - msg.client_ts;
+      rttSamples.push(rtt);
+      if (rttSamples.length > 10) rttSamples.shift();
+      lastRtt = Math.round(rttSamples.reduce((a, b) => a + b, 0) / rttSamples.length);
+    }
+  } catch (_) {}
+}
+
+// ── FPS + Latency display ──
+setInterval(() => {
+  const now = performance.now();
+  const dt  = (now - lastFpsTime) / 1000;
+  const fps = Math.round(frameCount / dt);
+  fpsTxt.textContent = connected ? `${fps} fps` : '-- fps';
+
+  if (connected && isActive && lastRtt !== null) {
+    latDisp.textContent = `RTT: ${lastRtt} ms`;
+    latDisp.className = 'stat-badge ' + (lastRtt < 50 ? 'good' : lastRtt < 150 ? 'warn' : 'bad');
+  } else {
+    latDisp.textContent = 'RTT: -- ms';
+    latDisp.className = 'stat-badge';
+  }
+
+  frameCount = 0;
+  lastFpsTime = now;
+}, 1000);
+
+// ── WebSocket ──
+let userDisconnected = false;
+
+function connect() {
+  if (ws) {
+    ws.onclose = null;
+    ws.onerror = null;
+    try { ws.close(); } catch (_) {}
+  }
+  const url = wsUrlIn.value.trim();
+  if (!url) return;
+  stxt.textContent = 'Connecting\u2026';
+  aspectRatioSet = false;
+  rttSamples = [];
+  lastRtt = null;
+  isActive = false;
+
+  ws = new WebSocket(url);
+  ws.binaryType = 'blob';
+
+  ws.onopen = () => {
+    connected = true;
+    userDisconnected = false;
+    if (reconnectTimer) { clearInterval(reconnectTimer); reconnectTimer = null; }
+    pendingReconnect = false;
+    dot.classList.add('connected');
+    displayFrame.classList.add('connected');
+    connectBtn.textContent = 'Disconnect';
+    connectBtn.className = 'btn btn-disconnect';
+    stxt.textContent = 'Connected';
+    resetBtn.disabled = false;
+    resetBtn.textContent = 'Reset';
+    overlay.classList.add('hidden');
+  };
+  ws.onmessage = handleMessage;
+  ws.onclose = () => {
+    connected = false;
+    isActive = false;
+    overlay.classList.remove('hidden');
+    queueOverlay.classList.add('hidden');
+    dot.classList.remove('connected');
+    displayFrame.classList.remove('connected');
+    connectBtn.textContent = 'Connect';
+    connectBtn.className = 'btn btn-connect';
+    fpsTxt.textContent = '-- fps';
+    latDisp.textContent = 'RTT: -- ms';
+    latDisp.className = 'stat-badge';
+    resDisp.textContent = '--';
+    lastRtt = null;
+
+    if (userDisconnected) {
+      stxt.textContent = 'Disconnected';
+    } else if (pendingReconnect) {
+      stxt.textContent = 'Resetting\u2026';
+      scheduleReconnect();
+    } else {
+      stxt.textContent = 'Disconnected';
+    }
+  };
+  ws.onerror = () => {};
+}
+
+function scheduleReconnect() {
+  if (reconnectTimer) return;
+  let attempt = 0;
+  reconnectTimer = setInterval(() => {
+    attempt++;
+    stxt.textContent = `Reconnecting (${attempt})\u2026`;
+    connect();
+  }, 2000);
+}
+
+connectBtn.addEventListener('click', () => {
+  if (connected) {
+    userDisconnected = true;
+    pendingReconnect = false;
+    if (reconnectTimer) { clearInterval(reconnectTimer); reconnectTimer = null; }
+    ws.close();
+  } else {
+    userDisconnected = false;
+    connect();
+  }
+});
+</script>
+
+</body>
+</html>

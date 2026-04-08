@@ -1,0 +1,4 @@
+[submodule "MeisterRender"]
+	path = components/render/MeisterRender
+	url = https://github.com/InternRobotics/SIM1MeisterRender.git
+	branch = main

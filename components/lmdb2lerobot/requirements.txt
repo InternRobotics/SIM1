@@ -1,0 +1,20 @@
+# Conversion script dependencies (install into conda env: lerobot)
+#
+# Step 1 - install Hugging Face LeRobot first (requires Python >= 3.12; brings in torch/torchvision):
+#   pip install "git+https://github.com/huggingface/lerobot.git"
+#
+# Step 2 - install this file (adds OpenCV and other I/O helpers):
+#   pip install -r components/lmdb2lerobot/requirements.txt
+#
+# Or in one line (inside an activated lerobot env):
+#   pip install "git+https://github.com/huggingface/lerobot.git" \
+#     && pip install -r components/lmdb2lerobot/requirements.txt
+
+opencv-python-headless
+lmdb
+scipy
+tqdm
+imageio[ffmpeg]
+pandas
+pyarrow
+# numpy version is constrained by lerobot/torch (typically <2.3); do not upgrade numpy independently after lerobot

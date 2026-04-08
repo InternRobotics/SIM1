@@ -1,0 +1,79 @@
+# ── Python ──
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+*.eggs/
+dist/
+build/
+
+# ── Data & Assets (large files) ──
+recordings/
+*.mp4
+*.npy
+*.bin
+*.lmd
+*.usd
+*.usda
+*.usdc
+*.blend
+*.blend1
+*.npz
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+*.onnx
+*.h5
+*.hdf5
+components/datagen/traj_df/output/
+
+# ── Logs & Output ──
+*.log
+output/
+out/
+imgui.ini
+
+# ── Replay session data (large; do not commit) ──
+/replay/
+replay/
+assets/
+
+# ── dataset/ (example + generated NPZ/segments; do not commit) ──
+/dataset/
+dataset/
+
+# ── assets (large; do not commit) ──
+/assets/
+assets/
+
+
+# ── Virtual Environments ──
+.venv/
+venv/
+env/
+
+# ── IDE / Editor ──
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# ── OS ──
+.DS_Store
+Thumbs.db
+
+# ── Caches (HF, Blender, tooling, etc.; do not commit) ──
+.cache/
+.warp/
+
+# ── Newton vendor / tooling (was in newton/.gitignore) ──
+.mypy_cache/
+wheels/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+MUJOCO_LOG.TXT

@@ -1,0 +1,2 @@
+from .lift2_cloth_manipulation import Lift2ClothManip
+from .acone_cloth_manipulation import AconeClothManip

@@ -1,0 +1,14 @@
+# Full `main.py` pipeline (Steps 1–4) in one conda env (see components/render/README.md).
+# Install: pip install -r components/render/requirement.txt (from repo root)
+# Default setup.sh also installs this (unless SIM1_SKIP_RENDER=1).
+
+# --- Steps 1–3 (Blender USD → blend, URDF cameras, scene randomization) ---
+yourdfpy
+tqdm
+
+# --- Step 4 (RGB export + LMDB / MP4 in step4_render_acone.py) ---
+imageio[ffmpeg]
+lmdb
+
+# --- MeisterRender git submodule (Step 4 path tracing / EEVEE; RenderEngine) ---
+-r MeisterRender/requirements.txt
