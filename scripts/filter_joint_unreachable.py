@@ -22,7 +22,7 @@ import shutil
 _REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if _REPO_ROOT not in sys.path:
     sys.path.insert(0, _REPO_ROOT)
-from sim1_asset_paths import get_acone_urdf_path
+from scripts.sim1_asset_paths import get_acone_urdf_path
 import numpy as np
 import time
 from datetime import datetime

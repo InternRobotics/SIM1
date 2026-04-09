@@ -42,6 +42,7 @@ class simpleDiffusion(nn.Module):
         scheduling_matrix="full_sequence",
         final_step=True,
         fill_scene_tensor=True,
+        device=None,
     ): 
         super().__init__()
         # Training objective
@@ -76,7 +77,10 @@ class simpleDiffusion(nn.Module):
         self.scheduling_matrix = scheduling_matrix
         self.final_step = final_step
         self.fill_scene_tensor = fill_scene_tensor
-        self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+        if device is None:
+            self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+        else:
+            self.device = torch.device(device)
 
     def logsnr_schedule_cosine(self, t, logsnr_min=-15, logsnr_max=15):
         """

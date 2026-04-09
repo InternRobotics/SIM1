@@ -8,7 +8,7 @@ _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 _REPO_ROOT = os.path.dirname(_SCRIPT_DIR)
 if _REPO_ROOT not in sys.path:
     sys.path.insert(0, _REPO_ROOT)
-from sim1_asset_paths import get_acone_urdf_path
+from scripts.sim1_asset_paths import get_acone_urdf_path
 
 # === Path configuration ===
 # These are used only when running this script directly.
@@ -29,6 +29,22 @@ gripper_joint_names = {
 }
 left_ee_body_names = {"left_link16"}
 right_ee_body_names = {"right_link26"}
+
+
+def load_npz_compat(path):
+    """
+    Load npz/npy with compatibility fallback.
+
+    Some legacy datasets may contain pickled payloads inside .npz/.npy, which
+    raises ValueError under NumPy's default `allow_pickle=False`.
+    """
+    try:
+        return np.load(path)
+    except ValueError as exc:
+        if "allow_pickle=False" not in str(exc):
+            raise
+        print(f"[WARN] Retrying with allow_pickle=True for: {path}")
+        return np.load(path, allow_pickle=True)
 
 # === Build model and resolve end-effector body indices ===
 def build_model_and_get_ee_indices():
@@ -83,7 +99,7 @@ def convert_ee_quat(input_dir, output_dir):
         print(f"Processing {npz_file}...")
 
         # Load raw trajectory
-        data = np.load(input_path)
+        data = load_npz_compat(input_path)
         joint_q_seq = data["joint_q"]      # (n, dof)
         openness_seq = data["openness"]    # (n, 2) → [left_open, right_open]
 
@@ -108,6 +124,7 @@ def convert_ee_quat(input_dir, output_dir):
         # Save
         np.savez(output_path, ee_pos=ee_pos_array)
         print(f" Saved: {output_path}")
+        data.close()
 
     cat = np.concatenate(all_vecs, axis=0)  # (N, 16)
     mean = cat.mean(axis=0)

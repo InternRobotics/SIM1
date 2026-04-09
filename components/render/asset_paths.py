@@ -1,8 +1,8 @@
 """
-SIM1 render pipeline imports: paths come from sim1_asset_paths (Hugging Face bundle).
+SIM1 render pipeline imports: paths come from scripts.sim1_asset_paths (Hugging Face bundle).
 
-This module prepends the repository root to sys.path so `import sim1_asset_paths` works
-when Blender/scripts run with cwd under components/render/.
+This module prepends the repository root to sys.path so `import scripts.sim1_asset_paths`
+works when Blender/scripts run with cwd under components/render/.
 """
 
 from __future__ import annotations
@@ -15,7 +15,7 @@ _PROJECT_ROOT = os.path.dirname(os.path.dirname(_RENDER_DIR))
 if _PROJECT_ROOT not in sys.path:
     sys.path.insert(0, _PROJECT_ROOT)
 
-from sim1_asset_paths import (  # noqa: E402
+from scripts.sim1_asset_paths import (  # noqa: E402
     describe_assets_resolution,
     get_acone_urdf_path,
     get_assets_root,

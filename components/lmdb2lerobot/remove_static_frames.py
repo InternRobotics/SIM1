@@ -17,6 +17,7 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 import cv2
 from concurrent.futures import ProcessPoolExecutor, as_completed
+from collections import defaultdict
 
 
 def calculate_state_change(state1, state2):
@@ -200,6 +201,266 @@ def remove_frames_from_video(video_path, frames_to_delete):
         if 'temp_path' in locals() and temp_path.exists():
             temp_path.unlink()
         return False
+
+
+def write_table_atomic(parquet_path, table):
+    """Write parquet via temp file and atomic replace."""
+    temp_path = parquet_path.with_suffix('.parquet.tmp')
+    try:
+        pq.write_table(
+            table,
+            temp_path,
+            compression='snappy',
+            use_dictionary=True,
+            write_statistics=True,
+            version='2.6',
+        )
+        test_table = pq.read_table(temp_path)
+        if test_table.num_rows != table.num_rows:
+            raise ValueError("Row count mismatch after parquet write")
+        temp_path.replace(parquet_path)
+    except Exception as e:
+        if temp_path.exists():
+            temp_path.unlink()
+        raise e
+
+
+def process_chunk_dataset(data_parquet_dir, videos_dir, meta_dir, threshold_ratio=0.01):
+    """
+    Process chunk-style LeRobot dataset where frames are stored in file-XXX.parquet.
+    Returns episode_results list compatible with existing summary code.
+    """
+    parquet_files = sorted(data_parquet_dir.rglob('*.parquet'))
+    if not parquet_files:
+        print(f"Warning: no parquet files under {data_parquet_dir}")
+        return []
+
+    episode_rows = defaultdict(list)
+    for pf in parquet_files:
+        table = pq.read_table(pf)
+        required = {'episode_index', 'observation.state'}
+        if not required.issubset(set(table.column_names)):
+            continue
+
+        episode_col = table['episode_index'].to_pylist()
+        state_col = table['observation.state'].to_pylist()
+        if 'frame_index' in table.column_names:
+            frame_col = table['frame_index'].to_pylist()
+        else:
+            frame_col = list(range(table.num_rows))
+        if 'index' in table.column_names:
+            index_col = table['index'].to_pylist()
+        else:
+            index_col = list(range(table.num_rows))
+
+        for row_idx in range(table.num_rows):
+            ep = int(episode_col[row_idx])
+            episode_rows[ep].append(
+                (int(frame_col[row_idx]), int(index_col[row_idx]), pf, row_idx, state_col[row_idx])
+            )
+
+    episode_indices = sorted(episode_rows.keys())
+    print(f"Found {len(episode_indices)} episodes (chunk layout)")
+    if not episode_indices:
+        return []
+
+    print(f"Dataset root: {data_parquet_dir.parent}")
+    print(f"threshold_ratio: {threshold_ratio}")
+    print("-" * 50)
+
+    delete_map = defaultdict(set)  # parquet_path -> set(row_idx)
+    episode_results = []
+    for ep_idx in episode_indices:
+        rows = episode_rows[ep_idx]
+        rows.sort(key=lambda x: (x[0], x[1]))
+        states = [r[4] for r in rows]
+        frames_to_delete = find_static_frames(states, threshold_ratio)
+
+        if not frames_to_delete:
+            episode_results.append(
+                {
+                    'episode_index': ep_idx,
+                    'status': 'no_static_frames',
+                    'deleted_frames': 0,
+                    'original_length': len(states),
+                    'new_length': len(states),
+                }
+            )
+            continue
+
+        for seq_pos in frames_to_delete:
+            _, _, pf, row_idx, _ = rows[seq_pos]
+            delete_map[pf].add(row_idx)
+
+        episode_results.append(
+            {
+                'episode_index': ep_idx,
+                'status': 'success',
+                'deleted_frames': len(frames_to_delete),
+                'original_length': len(states),
+                'new_length': len(states) - len(frames_to_delete),
+            }
+        )
+
+    # 1) Rewrite data parquet files
+    for pf in tqdm(sorted(delete_map.keys()), desc="Rewrite chunk parquet"):
+        rows_to_delete = delete_map[pf]
+        if not rows_to_delete:
+            continue
+        table = pq.read_table(pf)
+        keep_mask = np.ones(table.num_rows, dtype=bool)
+        for idx in rows_to_delete:
+            if 0 <= idx < table.num_rows:
+                keep_mask[idx] = False
+        kept = np.where(keep_mask)[0]
+        if len(kept) == table.num_rows:
+            continue
+        new_table = table.take(pa.array(kept))
+        write_table_atomic(pf, new_table)
+
+    # 2) Rewrite corresponding chunk videos (same row indices per chunk file)
+    video_keys = ['images.rgb.head', 'images.rgb.hand_left', 'images.rgb.hand_right']
+    for pf in tqdm(sorted(delete_map.keys()), desc="Rewrite chunk videos"):
+        rows_to_delete = delete_map[pf]
+        if not rows_to_delete:
+            continue
+        rel = pf.relative_to(data_parquet_dir).with_suffix('.mp4')
+        for video_key in video_keys:
+            video_path = videos_dir / video_key / rel
+            if video_path.exists():
+                remove_frames_from_video(video_path, rows_to_delete)
+
+    # 3) Rebuild index/frame_index/timestamp across chunk files
+    fps = 30.0
+    info_file = meta_dir / 'info.json'
+    old_total_frames = None
+    if info_file.exists():
+        try:
+            with open(info_file, 'r') as f:
+                info = json.load(f)
+            fps = float(info.get('fps', fps))
+            old_total_frames = info.get('total_frames')
+        except Exception:
+            pass
+
+    global_index = 0
+    ep_counters = defaultdict(int)
+    parquet_files = sorted(data_parquet_dir.rglob('*.parquet'))
+    for pf in tqdm(parquet_files, desc="Reindex parquet"):
+        table = pq.read_table(pf)
+        if table.num_rows == 0:
+            continue
+
+        ep_col = table['episode_index'].to_pylist() if 'episode_index' in table.column_names else None
+        new_frame_index = None
+        new_timestamp = None
+        if ep_col is not None:
+            new_frame_index = []
+            for ep in ep_col:
+                ep = int(ep)
+                fid = ep_counters[ep]
+                new_frame_index.append(fid)
+                ep_counters[ep] = fid + 1
+            new_timestamp = [fid / fps for fid in new_frame_index]
+
+        arrays = []
+        for field in table.schema:
+            col_name = field.name
+            if col_name == 'index':
+                arrays.append(pa.array(range(global_index, global_index + table.num_rows), type=field.type))
+            elif col_name == 'frame_index' and new_frame_index is not None:
+                arrays.append(pa.array(new_frame_index, type=field.type))
+            elif col_name == 'timestamp' and new_timestamp is not None:
+                arrays.append(pa.array(new_timestamp, type=field.type))
+            else:
+                arrays.append(table[col_name])
+        new_table = pa.Table.from_arrays(arrays, schema=table.schema)
+        write_table_atomic(pf, new_table)
+        global_index += table.num_rows
+
+    # 4) Update meta/info.json and meta/episodes parquet basic fields
+    episode_lengths = dict(ep_counters)
+    total_frames = sum(episode_lengths.values())
+
+    if info_file.exists():
+        with open(info_file, 'r') as f:
+            info = json.load(f)
+        info['total_frames'] = total_frames
+        info['total_episodes'] = len(episode_lengths)
+        with open(info_file, 'w') as f:
+            json.dump(info, f, indent=4)
+
+    episodes_parquets = sorted((meta_dir / 'episodes').rglob('*.parquet')) if (meta_dir / 'episodes').exists() else []
+    if episodes_parquets:
+        episode_order = sorted(episode_lengths.keys())
+        start_map = {}
+        end_map = {}
+        running = 0
+        for ep in episode_order:
+            start_map[ep] = running
+            running += episode_lengths[ep]
+            end_map[ep] = running
+
+        for ep_pf in episodes_parquets:
+            table = pq.read_table(ep_pf)
+            if 'episode_index' not in table.column_names:
+                continue
+            ep_ids = [int(x) for x in table['episode_index'].to_pylist()]
+            old_lengths = table['length'].to_pylist() if 'length' in table.column_names else [None] * len(ep_ids)
+
+            arrays = []
+            for field in table.schema:
+                name = field.name
+                if name == 'length':
+                    vals = [int(episode_lengths.get(ep, old_lengths[i] if old_lengths[i] is not None else 0)) for i, ep in enumerate(ep_ids)]
+                    arrays.append(pa.array(vals, type=field.type))
+                elif name == 'dataset_from_index':
+                    vals = [int(start_map.get(ep, 0)) for ep in ep_ids]
+                    arrays.append(pa.array(vals, type=field.type))
+                elif name == 'dataset_to_index':
+                    vals = [int(end_map.get(ep, 0)) for ep in ep_ids]
+                    arrays.append(pa.array(vals, type=field.type))
+                elif name.endswith('/from_timestamp'):
+                    vals = [float(start_map.get(ep, 0) / fps) for ep in ep_ids]
+                    arrays.append(pa.array(vals, type=field.type))
+                elif name.endswith('/to_timestamp'):
+                    vals = [float(end_map.get(ep, 0) / fps) for ep in ep_ids]
+                    arrays.append(pa.array(vals, type=field.type))
+                elif name.startswith('stats/') and name.endswith('/count'):
+                    col = table[name].to_pylist()
+                    vals = []
+                    for i, ep in enumerate(ep_ids):
+                        old_v = col[i]
+                        old_len = old_lengths[i]
+                        new_len = int(episode_lengths.get(ep, old_len if old_len is not None else 0))
+                        if isinstance(old_v, list) and len(old_v) > 0 and old_len is not None and old_v[0] == old_len:
+                            old_v = list(old_v)
+                            old_v[0] = new_len
+                        vals.append(old_v)
+                    arrays.append(pa.array(vals, type=field.type))
+                else:
+                    arrays.append(table[name])
+            new_table = pa.Table.from_arrays(arrays, schema=table.schema)
+            write_table_atomic(ep_pf, new_table)
+
+    # Optional: keep stats.json total count in sync when possible
+    stats_file = meta_dir / 'stats.json'
+    if stats_file.exists():
+        try:
+            with open(stats_file, 'r') as f:
+                stats = json.load(f)
+            if old_total_frames is not None:
+                for _, v in stats.items():
+                    if isinstance(v, dict) and 'count' in v:
+                        c = v['count']
+                        if isinstance(c, list) and len(c) > 0 and c[0] == old_total_frames:
+                            c[0] = total_frames
+            with open(stats_file, 'w') as f:
+                json.dump(stats, f, indent=4)
+        except Exception as e:
+            print(f"Warning: failed to update stats.json count fields: {e}")
+
+    return episode_results
 
 
 def process_episode(data_dir_str, videos_dir_str, episode_index, threshold_ratio=0.01):
@@ -435,6 +696,37 @@ def update_global_indices(data_dir_str, episode_results):
             continue
 
 
+def print_episode_frame_counts(episode_results):
+    """
+    Print per-episode frame counts before/after static-frame removal.
+    """
+    valid = [
+        r for r in episode_results
+        if 'episode_index' in r and 'original_length' in r and 'new_length' in r
+    ]
+    if not valid:
+        print("\nFrame counts: no per-episode length data available.")
+        return
+
+    valid = sorted(valid, key=lambda x: x['episode_index'])
+    print("\nFrame counts per episode (before -> after, removed):")
+    total_before = 0
+    total_after = 0
+    for r in valid:
+        ep = int(r['episode_index'])
+        before = int(r['original_length'])
+        after = int(r['new_length'])
+        removed = int(r.get('deleted_frames', max(0, before - after)))
+        total_before += before
+        total_after += after
+        print(f"  episode_{ep:06d}: {before} -> {after} (removed {removed})")
+
+    print(
+        f"Total frames: {total_before} -> {total_after} "
+        f"(removed {total_before - total_after})"
+    )
+
+
 def main():
     parser = argparse.ArgumentParser(
         description=(
@@ -493,6 +785,25 @@ def main():
 
     episode_indices = sorted(episode_indices)
 
+    if not episode_indices:
+        has_chunk_like_parquet = any(pf.stem.startswith('file-') for pf in parquet_files)
+        if has_chunk_like_parquet:
+            episode_results = process_chunk_dataset(
+                data_parquet_dir=data_parquet_dir,
+                videos_dir=videos_dir,
+                meta_dir=meta_dir,
+                threshold_ratio=args.threshold_ratio,
+            )
+            total_deleted = sum(r.get('deleted_frames', 0) for r in episode_results)
+            success_count = sum(
+                1 for r in episode_results if r['status'] in ['success', 'no_static_frames']
+            )
+            print_episode_frame_counts(episode_results)
+            print("\nDone.")
+            print(f"Successful episodes: {success_count}/{len(episode_results)}")
+            print(f"Total frames removed: {total_deleted}")
+            return
+
     print(f"Found {len(episode_indices)} episodes")
     print(f"Dataset root: {data_dir}")
     print(f"threshold_ratio: {args.threshold_ratio}")
@@ -534,6 +845,7 @@ def main():
     total_deleted = sum(r.get('deleted_frames', 0) for r in episode_results)
     success_count = sum(1 for r in episode_results if r['status'] == 'success')
 
+    print_episode_frame_counts(episode_results)
     print("\nDone.")
     print(f"Successful episodes: {success_count}/{len(episode_indices)}")
     print(f"Total frames removed: {total_deleted}")

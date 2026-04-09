@@ -56,7 +56,7 @@ SKIP_REPLAY=false
 SKIP_FILTER=false
 SKIP_ASSET_CHECK=false
 
-# ── Resolve Hugging Face asset root (same rules as sim1_asset_paths.py) ──
+# ── Resolve Hugging Face asset root (same rules as scripts/sim1_asset_paths.py) ──
 resolve_assets_root() {
     if [[ -z "${SIM1_ASSETS_ROOT:-}" ]]; then
         echo "${PROJECT_ROOT}/assets"
@@ -302,7 +302,7 @@ done
 
 verify_sim1_assets
 
-# Match Python sim1_asset_paths.py: subprocesses read the same HF bundle root
+# Match Python scripts/sim1_asset_paths.py: subprocesses read the same HF bundle root
 export SIM1_ASSETS_ROOT="$(resolve_assets_root)"
 
 # Auto-select DataGen reference source when --data_folder is omitted.

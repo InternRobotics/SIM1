@@ -23,9 +23,8 @@ import warp as wp
 import newton
 
 
-def _find_nan_members(obj: Any | None) -> list[str]:
-    """Return names of Warp array attributes on obj that contain any NaN (for example test mode)."""
-
+def find_nan_members(obj: Any | None) -> list[str]:
+    """Find Warp array members of an object that contain NaN values (same logic as newton.tests)."""
     nan_members: list[str] = []
     if obj is None:
         return nan_members
@@ -203,23 +202,23 @@ def run(example, args):
     if args is not None and args.test:
         # generic tests for finiteness of Newton objects
         if hasattr(example, "state_0"):
-            nan_members = _find_nan_members(example.state_0)
+            nan_members = find_nan_members(example.state_0)
             if nan_members:
                 raise ValueError(f"NaN members found in state_0: {nan_members}")
         if hasattr(example, "state_1"):
-            nan_members = _find_nan_members(example.state_1)
+            nan_members = find_nan_members(example.state_1)
             if nan_members:
                 raise ValueError(f"NaN members found in state_1: {nan_members}")
         if hasattr(example, "model"):
-            nan_members = _find_nan_members(example.model)
+            nan_members = find_nan_members(example.model)
             if nan_members:
                 raise ValueError(f"NaN members found in model: {nan_members}")
         if hasattr(example, "control"):
-            nan_members = _find_nan_members(example.control)
+            nan_members = find_nan_members(example.control)
             if nan_members:
                 raise ValueError(f"NaN members found in control: {nan_members}")
         if hasattr(example, "contacts"):
-            nan_members = _find_nan_members(example.contacts)
+            nan_members = find_nan_members(example.contacts)
             if nan_members:
                 raise ValueError(f"NaN members found in contacts: {nan_members}")
 
@@ -370,15 +369,11 @@ def main():
     import runpy  # noqa: PLC0415
     import sys  # noqa: PLC0415
 
-    # Map short names to full module paths (only categories present on disk)
+    # Map short names to full module paths
     example_map = {}
-    modules = ["basic", "cloth", "diffsim", "ik", "mpm", "robot", "selection", "sensors"]
-    root = get_source_directory()
+    modules = ["robot"]
     for module in sorted(modules):
-        mod_dir = os.path.join(root, module)
-        if not os.path.isdir(mod_dir):
-            continue
-        for example in sorted(os.listdir(mod_dir)):
+        for example in sorted(os.listdir(os.path.join(get_source_directory(), module))):
             if example.endswith(".py"):
                 example_name = example[8:-3]  # Remove "example_" prefix and ".py" file ext
                 example_map[example_name] = f"newton.examples.{module}.{example[:-3]}"

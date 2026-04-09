@@ -37,7 +37,7 @@ A research project from [InternRobotics](https://github.com/InternRobotics).
 
 ### Prerequisites
 
-Use Python 3.11 with conda (environment name `sim1`) and CUDA toolkit ≥ 11.8 if you want GPU acceleration.
+Use Python 3.11 with conda (environment name `sim1`) and CUDA toolkit >= 12.4 if you want GPU acceleration.
 
 <details>
 <summary>Reference: Newton Installation Guide</summary>
@@ -233,11 +233,12 @@ Environment: use the same `sim1` env; the render stack is installed by `setup.sh
 
 ```bash
 conda activate sim1
-python components/render/main.py --root_dir ./replay/my_run_0001
-bash components/render/batch_step4.sh ./replay/my_run_0001
 
-# Optional: Step 4 inside main after each Step 3
-# python components/render/main.py --root_dir ./replay/my_run_0001 --step4
+# One-click render on latest replay/pipeline_output_XXXX
+bash components/render/run_latest.sh
+
+# Optional: use another replay prefix
+# bash components/render/run_latest.sh --session-prefix my_run
 ```
 
 ### Asset Configuration
@@ -260,9 +261,15 @@ conda activate lerobot
 Single session → LeRobot dataset:
 
 ```bash
-bash components/lmdb2lerobot/run_local.sh \
-  --src ./replay/my_session/out_updated \
-  --out ./replay/my_session/lerobot_dataset
+# Auto-detect latest replay/pipeline_output_XXXX, then:
+#   src = <latest>/out_updated
+#   out = <latest>/lerobot_dataset
+bash components/lmdb2lerobot/run_local.sh
+
+# Optional: explicit paths still supported
+# bash components/lmdb2lerobot/run_local.sh \
+#   --src ./replay/my_session/out_updated \
+#   --out ./replay/my_session/lerobot_dataset
 ```
 
 This runs LMDB→LeRobot, sim2real, then removes near-static frames by default (`--keep-static-frames` to skip).
@@ -325,18 +332,19 @@ sim1/
 
 ## TODO List
 
-- [x] Simulation assets — Robot URDFs, cloth meshes, render assets on Hugging Face ([Sim1 assets](https://huggingface.co/InternRobotics/Sim1_Assets)); see [Download assets](#step-4--download-assets) and `download_assets.sh`.
-- [x] Public datasets — Pre-generated trajectories / rendered data ([Sim1 dataset](https://huggingface.co/datasets/InternRobotics/Sim1_Dataset)) and related releases.
-- [x] Data generation pipeline — Generate → smooth → replay → filter with `run_pipeline.sh`; optional `--position-randomize` ([Quick Start — Data Generation](#quick-start--data-generation)).
-- [x] Training utilities — Policy / trajectory code under `module_train/` (e.g. discriminator, generator).
+- [x] Simulation assets — Robot URDFs, cloth meshes, render assets.
+- [x] Public datasets — Open-sourced a subset of trajectories and rendered data.
+- [x] Data generation pipeline — Supports one-command generate → smooth → replay → filter.
+- [x] Training utilities — Includes policy and trajectory training modules.
+- [ ] Open-source 10,000 trajectories.
 - [ ] Upgrade to latest Newton — Bump bundled `newton/` to upstream; adapt API changes in envs/tasks/components.
-- [ ] Integrate libuipc solver — Optional [libuipc](https://github.com/libuipc/libuipc) cloth/deformable backend for richer contact and friction.
+- [ ] Integrate libuipc solver — Optional libuipc cloth/deformable backend for richer contact and friction.
 
 ---
 
 ## Citation
 
-If you use Sim1 (code, assets, or datasets) in research, please cite the paper below. Code: [github.com/InternRobotics/SIM1](https://github.com/InternRobotics/SIM1). Project page: [internrobotics.github.io/sim1.github.io](https://internrobotics.github.io/sim1.github.io/).
+If you use Sim1 (code, assets, or datasets) in research, please cite the paper below.
 
 ```bibtex
 @article{sim1_2026,
@@ -351,4 +359,4 @@ If you use Sim1 (code, assets, or datasets) in research, please cite the paper b
 
 ## License
 
-Unless otherwise noted, all resources and code in this repository are licensed under the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0). Language data is licensed under [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/). [Newton](https://github.com/newton-physics/newton) and other third-party components follow their respective distribution licenses; see e.g. [newton/LICENSE.md](newton/LICENSE.md).
+Unless otherwise noted, this repository is released under [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0), while language data is released under [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/). [Newton](https://github.com/newton-physics/newton) and other third-party components follow their own licenses; see, for example, [newton/LICENSE.md](newton/LICENSE.md).

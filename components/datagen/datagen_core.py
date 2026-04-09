@@ -3,12 +3,12 @@ import sys
 import numpy as np
 from tqdm import tqdm
 
-# Repo root (for sim1_asset_paths — HF bundle: model/flow_ckpt_three.pth)
+# Repo root (for scripts.sim1_asset_paths - HF bundle: model/flow_ckpt_three.pth)
 _DATAGEN_DIR = os.path.dirname(os.path.abspath(__file__))
 _REPO_ROOT = os.path.dirname(os.path.dirname(_DATAGEN_DIR))
 if _REPO_ROOT not in sys.path:
     sys.path.insert(0, _REPO_ROOT)
-from sim1_asset_paths import get_flow_ckpt_three_path
+from scripts.sim1_asset_paths import get_flow_ckpt_three_path
 
 from components.function import fk, solve_ik
 from components.datagen.splitter import  Splitter, SplitterFine
@@ -56,8 +56,21 @@ class DataGenerator:
 
 
             device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+            if device.type == "cuda":
+                try:
+                    _ = torch.rand(1, device=device)
+                except RuntimeError as exc:
+                    if "no kernel image is available for execution on the device" in str(exc):
+                        print(
+                            "[WARN] CUDA runtime/kernel image mismatch detected for current GPU. "
+                            "Falling back to CPU for diffusion inference."
+                        )
+                        device = torch.device("cpu")
+                    else:
+                        raise
+            self.flow_device = device
             DiffusionUNet = UNet().to(device) 
-            flow = simpleDiffusion(DiffusionUNet).to(device)
+            flow = simpleDiffusion(DiffusionUNet, device=device).to(device)
 
             ckpt_path = get_flow_ckpt_three_path()
             if not os.path.isfile(ckpt_path):
@@ -101,7 +114,7 @@ class DataGenerator:
         normalizer = self.normalizer
 
         flow = self.flow
-        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        device = getattr(self, "flow_device", torch.device('cuda' if torch.cuda.is_available() else 'cpu'))
 
         # prepare subsegments: split if intermediate exists
         tasks = list(traj.keys())

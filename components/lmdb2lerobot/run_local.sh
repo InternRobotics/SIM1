@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Convert LMDB -> LeRobot -> sim2real for a single source directory.
-# Paths are specified via --src / --out. See README.md or run with --help.
+# If --src/--out are omitted, auto-detect latest replay session:
+#   <repo>/replay/<session-prefix>_XXXX/{out_updated,lerobot_dataset}
 
 set -euo pipefail
 
@@ -12,13 +13,16 @@ usage() {
   local code="${1:-0}"
   cat <<'EOF'
 Usage:
-  bash run_local.sh --src <input_dir> --out <output_dir> [options]
+  bash run_local.sh [--src <input_dir>] [--out <output_dir>] [options]
 
-Required:
+Path options:
   --src    LMDB parent directory (e.g. .../out_updated) or a single episode
            directory (e.g. .../out_updated/000000)
   --out    LeRobot output root (deleted and recreated if it already exists;
            parent directory must exist)
+  --session-prefix NAME
+           Auto-detect source from latest replay/<NAME>_XXXX when --src/--out
+           are omitted (default: pipeline_output)
 
 Options:
   --skip-sim2real   skip sim2real.py post-processing
@@ -37,6 +41,7 @@ Options:
 
 Example:
   bash run_local.sh --src ./replay/my_run_0001/out_updated --out ./replay/my_run_0001/lerobot_dataset
+  bash run_local.sh                      # auto latest replay/pipeline_output_XXXX
 EOF
   exit "${code}"
 }
@@ -61,6 +66,7 @@ REPO_ID="arx_sim_local"
 ORIGIN_FPS=60
 TARGET_FPS=60
 NUM_THREADS=4
+SESSION_PREFIX="pipeline_output"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -108,6 +114,10 @@ while [[ $# -gt 0 ]]; do
       NUM_THREADS="${2:?}"
       shift 2
       ;;
+    --session-prefix)
+      SESSION_PREFIX="${2:?}"
+      shift 2
+      ;;
     -h|--help)
       usage 0
       ;;
@@ -118,8 +128,24 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-[[ -n "${SRC}" ]]  || { echo "Missing --src" >&2; usage 1; }
-[[ -n "${SAVE}" ]] || { echo "Missing --out" >&2; usage 1; }
+if [[ -z "${SRC}" || -z "${SAVE}" ]]; then
+  shopt -s nullglob
+  sessions=( "${REPO_ROOT}/replay/${SESSION_PREFIX}_"[0-9][0-9][0-9][0-9] )
+  shopt -u nullglob
+  if [[ ${#sessions[@]} -eq 0 ]]; then
+    echo "Error: cannot auto-detect replay session under ${REPO_ROOT}/replay/${SESSION_PREFIX}_*" >&2
+    echo "Either run run_pipeline.sh first, or pass --src/--out explicitly." >&2
+    exit 1
+  fi
+  IFS=$'\n' sessions_sorted=($(printf '%s\n' "${sessions[@]}" | sort))
+  latest_session="${sessions_sorted[-1]}"
+  if [[ -z "${SRC}" ]]; then
+    SRC="${latest_session}/out_updated"
+  fi
+  if [[ -z "${SAVE}" ]]; then
+    SAVE="${latest_session}/lerobot_dataset"
+  fi
+fi
 
 SRC="$(to_abs "${SRC}")"
 SAVE="$(to_abs "${SAVE}")"

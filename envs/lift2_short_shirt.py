@@ -1,13 +1,13 @@
 import os
 import sys
 
-# Repo root must be on path for sim1_asset_paths (Hugging Face asset root: SIM1_ASSETS_ROOT).
+# Repo root must be on path for scripts.sim1_asset_paths (HF asset root: SIM1_ASSETS_ROOT).
 _ENV_DIR = os.path.dirname(os.path.abspath(__file__))
 _REPO_ROOT = os.path.dirname(_ENV_DIR)
 if _REPO_ROOT not in sys.path:
     sys.path.insert(0, _REPO_ROOT)
 
-from sim1_asset_paths import get_acone_urdf_path, get_cloth_usdc_path
+from scripts.sim1_asset_paths import get_acone_urdf_path, get_cloth_usdc_path
 
 import newton
 import warp as wp
