@@ -6,7 +6,7 @@
   <img src="media/teaser.gif" width="900px" alt="SIM1 teaser">
 </p>
 
-[![Demo](https://img.shields.io/badge/Demo-SIM1-0366d6?style=flat&logo=googlechrome&logoColor=white)](https://sim1-demo.intern-robotics.com/) [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE) [![arXiv](https://img.shields.io/badge/arXiv-coming%20soon-b31b1b.svg)](https://arxiv.org/) [![Project Page](https://img.shields.io/badge/Project%20Page-SIM1-0366d6?style=flat&logo=githubpages&logoColor=white)](https://internrobotics.github.io/sim1.github.io/) [![Hugging Face · Assets](https://img.shields.io/badge/🤗%20Sim1-Assets-yellow)](https://huggingface.co/InternRobotics/Sim1_Assets) [![Hugging Face · Dataset](https://img.shields.io/badge/🤗%20Sim1-Dataset-yellow)](https://huggingface.co/datasets/InternRobotics/Sim1_Dataset)
+[![Demo](https://img.shields.io/badge/Demo-SIM1-0366d6?style=flat&logo=googlechrome&logoColor=white)](https://sim1-demo.intern-robotics.com/) [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE) [![arXiv](https://img.shields.io/badge/arXiv-2604.08544-b31b1b.svg)](https://arxiv.org/abs/2604.08544) [![Project Page](https://img.shields.io/badge/Project%20Page-SIM1-0366d6?style=flat&logo=githubpages&logoColor=white)](https://internrobotics.github.io/sim1.github.io/) [![Hugging Face · Assets](https://img.shields.io/badge/🤗%20Sim1-Assets-yellow)](https://huggingface.co/InternRobotics/Sim1_Assets) [![Hugging Face · Dataset](https://img.shields.io/badge/🤗%20Sim1-Dataset-yellow)](https://huggingface.co/datasets/InternRobotics/Sim1_Dataset)
 
 </div>
 
@@ -347,11 +347,14 @@ sim1/
 If you use Sim1 (code, assets, or datasets) in research, please cite the paper below.
 
 ```bibtex
-@article{sim1_2026,
-  title   = {{SIM1}: Physics-Aligned Simulator as Zero-Shot Data Scaler in Deformable Worlds},
-  author  = {Yunsong Zhou and Hangxu Liu and Xuekun Jiang and Xing Shen and Xingyi Liu and Yuanzhen Zhou and Hui Wang and Baole Fang and Yang Tian and Zihan Zhang and Ziqi Fan and Mulin Yu and Qiaojun Yu and Li Ma and Hengjie Li and Hanqing Wang and Jia Zeng and Jiangmiao Pang},
-  year    = {2026},
-  note    = {https://internrobotics.github.io/sim1.github.io/},
+@misc{zhou2026sim1physicsalignedsimulatorzeroshot,
+      title={SIM1: Physics-Aligned Simulator as Zero-Shot Data Scaler in Deformable Worlds}, 
+      author={Yunsong Zhou and Hangxu Liu and Xuekun Jiang and Xing Shen and Yuanzhen Zhou and Hui Wang and Baole Fang and Yang Tian and Mulin Yu and Qiaojun Yu and Li Ma and Hengjie Li and Hanqing Wang and Jia Zeng and Jiangmiao Pang},
+      year={2026},
+      eprint={2604.08544},
+      archivePrefix={arXiv},
+      primaryClass={cs.RO},
+      url={https://arxiv.org/abs/2604.08544}, 
 }
 ```
 
